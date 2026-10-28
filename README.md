@@ -1,4 +1,4 @@
-﻿# StudyPDF AI - Day 1
+# StudyPDF AI - Day 1
 
 Vite + React + TypeScript PDF viewer. Local files are processed in the browser.
 No AI requests, OCR, backend, persistence, or selection event handlers.
@@ -30,3 +30,11 @@ If a development server is already running on port 5173, use it instead of start
 - src/index.css: text-layer scale/alignment and responsive scrolling layout.
 
 See TEST_CASES.md. No sample PDFs are bundled or fabricated.
+
+## Generated files and Git
+
+`public/pdfjs/` is generated and ignored by Git. `scripts/sync-pdfjs-assets.mjs`
+copies CMaps, fonts and WASM (including their license files) from the installed
+`pdfjs-dist` package. It runs automatically after npm install and before dev/build.
+Keep package-lock.json and the sync script in Git; do not commit node_modules,
+dist, local PDF fixtures or .env secrets.

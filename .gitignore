@@ -22,3 +22,22 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Generated PDF.js assets (restored by npm install/dev/build)
+/public/pdfjs/
+
+# Private/local PDF fixtures
+/test-pdfs/*
+!/test-pdfs/.gitkeep
+!/test-pdfs/README.md
+
+# Environment secrets (keep an example template)
+.env
+.env.*
+!.env.example
+
+# Test/build caches
+coverage/
+.vite/
+*.tsbuildinfo
+Thumbs.db
