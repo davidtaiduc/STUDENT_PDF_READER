@@ -74,6 +74,6 @@ export default function PdfPage({ pdf, pageNumber, scale }: PdfPageProps) {
 
   return <>
     {error && <p className="hint error" role="alert">{error}</p>}
-    <div className="pdf-page" ref={wrapRef} aria-label={`Trang PDF ${pageNumber}`} />
+    <div className="pdf-page" data-page-number={pageNumber} ref={wrapRef} aria-label={`Trang PDF ${pageNumber}`} />
   </>;
 }

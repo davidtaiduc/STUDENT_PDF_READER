@@ -42,3 +42,19 @@ Its event listeners are aborted and builder cancelled during effect cleanup.
 No AI, floating toolbar, OCR, or selection-to-AI integration added.
 Build and lint: PASS. Complex table/cross-column reading order still depends
 on the source PDF; not all page layouts are certified by this regression.
+
+## Day 2 (2026-10-29)
+Implemented shared PdfSelection and usePdfSelection. Validates both endpoints
+inside the same PDF text layer, captures raw text/page/viewport bounding rect
+and line rects; coalesces selection/scroll/resize events; invalidates snapshots
+on page/zoom/file changes, including reopening the same file. Added a simple
+selection preview, no floating toolbar or AI. Browser tests and build/lint pass.
+See docs/DAY_02_STATUS.md for acceptance evidence and remaining manual coverage.
+Development server remains http://127.0.0.1:5173.
+
+Selection ordering repair: added src/utils/orderSelectionText.ts and five
+regression tests in tests/selection-order.test.mjs. Wide displaced text blocks
+are repositioned in extracted text; rawText preserves browser output. Test Case 6
+subtitle is now below title. Browser regression: word, multiline, Ctrl+A, zoom,
+outside selection and page navigation pass. Native PDF text layer untouched.
+Run: node --experimental-strip-types --test tests/selection-order.test.mjs

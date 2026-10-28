@@ -94,3 +94,16 @@ button:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
   user-select: text;
   -webkit-user-select: text;
 }
+
+.selection-summary {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  border-top: 1px solid #d0d5db;
+  background: #fff;
+  font-size: 13px;
+  min-height: 42px;
+  max-height: 150px;
+  overflow: auto;
+}
+.selection-summary .selection-text { white-space: pre-wrap; overflow-wrap: anywhere; margin: 6px 0; }
+.selection-summary small { color: #66707a; }
