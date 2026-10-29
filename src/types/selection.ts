@@ -3,6 +3,8 @@ export interface PdfSelection {
   text: string;
   /** Unmodified browser selection, retained for diagnostics and later cleanup. */
   rawText: string;
+  cleanedText: string;
+  context: { before: string; after: string };
   pageNumber: number;
   /** Viewport CSS pixels, suitable for positioning a future floating toolbar. */
   rect: DOMRect;
