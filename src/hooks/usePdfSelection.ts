@@ -3,6 +3,9 @@ import type { RefObject } from "react";
 import type { PdfSelection } from "../types/selection";
 import { orderSelectionText } from "../utils/orderSelectionText";
 import type { SelectionFragment } from "../utils/orderSelectionText";
+import { normalizePdfSelection } from "../utils/normalizePdfSelection";
+import { extractSelectionContext } from "../utils/extractSelectionContext";
+import type { ContextFragment } from "../utils/extractSelectionContext";
 
 function textLayerFor(node: Node | null): Element | null {
   const element = node instanceof Element ? node : node?.parentElement;
@@ -27,9 +30,28 @@ export function readPdfSelection(root: HTMLElement): PdfSelection | null {
   // Measure selected text-node fragments only, not their layout containers.
   const rects: DOMRect[] = [];
   const fragments: SelectionFragment[] = [];
+  const before: ContextFragment[] = [];
+  const after: ContextFragment[] = [];
+  const selectedColumns: { left: number; right: number }[] = [];
   const walker = document.createTreeWalker(startLayer, NodeFilter.SHOW_TEXT);
   let node = walker.nextNode();
   while (node) {
+    if (node.textContent?.length) {
+      const whole = document.createRange();
+      whole.selectNodeContents(node);
+      const bounds = whole.getBoundingClientRect();
+      if (bounds.width > 0 && bounds.height > 0) {
+        const start = range.startContainer === node ? range.startOffset : 0;
+        const end = range.endContainer === node ? range.endOffset : node.textContent.length;
+        const item = (text: string) => ({ text, left: bounds.left, right: bounds.right });
+        if (range.intersectsNode(node)) {
+          selectedColumns.push(bounds);
+          if (start) before.push(item(node.textContent.slice(0, start)));
+          if (end < node.textContent.length) after.push(item(node.textContent.slice(end)));
+        } else if (range.comparePoint(node, 0) < 0) before.push(item(node.textContent));
+        else after.push(item(node.textContent));
+      }
+    }
     if (node.textContent?.length && range.intersectsNode(node)) {
       const fragment = document.createRange();
       fragment.setStart(node, range.startContainer === node ? range.startOffset : 0);
@@ -49,7 +71,14 @@ export function readPdfSelection(root: HTMLElement): PdfSelection | null {
   const top = Math.min(...rects.map((rect) => rect.top));
   const right = Math.max(...rects.map((rect) => rect.right));
   const bottom = Math.max(...rects.map((rect) => rect.bottom));
-  return { text: orderSelectionText(fragments, rawText), rawText, pageNumber, rect: new DOMRect(left, top, right - left, bottom - top), rects };
+  const text = orderSelectionText(fragments, rawText);
+  const column = {
+    left: Math.min(...selectedColumns.map((item) => item.left)),
+    right: Math.max(...selectedColumns.map((item) => item.right)),
+  };
+  return { text, rawText, cleanedText: normalizePdfSelection(text),
+    context: extractSelectionContext(before, after, column),
+    pageNumber, rect: new DOMRect(left, top, right - left, bottom - top), rects };
 }
 
 export function usePdfSelection(rootRef: RefObject<HTMLElement | null>, scopeKey: string) {
@@ -68,6 +97,7 @@ export function usePdfSelection(rootRef: RefObject<HTMLElement | null>, scopeKey
       });
     };
     const onPointerDown = (event: PointerEvent) => {
+      if (event.target instanceof Element && event.target.closest("[data-selection-controls]")) return;
       if (event.target instanceof Node && !root.contains(event.target)) {
         if (frame !== null) cancelAnimationFrame(frame);
         frame = null;
@@ -96,7 +126,11 @@ export function usePdfSelection(rootRef: RefObject<HTMLElement | null>, scopeKey
     document.addEventListener("pointerdown", onPointerDown, options);
     document.addEventListener("scroll", schedule, { ...options, capture: true, passive: true });
     window.addEventListener("resize", schedule, options);
+    // Opening the bottom panel changes the PDF viewport without window resize.
+    const observer = new ResizeObserver(schedule);
+    observer.observe(root);
     return () => {
+      observer.disconnect();
       controller.abort();
       if (frame !== null) cancelAnimationFrame(frame);
       const selected = window.getSelection();

@@ -9,10 +9,6 @@ export default function App() {
         <PdfViewer />
       </main>
 
-      <section className="ai-panel">
-        <strong>AI Assistant</strong>
-        <p>Chọn một đoạn văn để bắt đầu.</p>
-      </section>
     </div>
   );
 }

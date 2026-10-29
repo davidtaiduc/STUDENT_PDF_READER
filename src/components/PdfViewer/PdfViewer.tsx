@@ -4,6 +4,7 @@ import { pdfjsLib, pdfAssetBase } from "../../lib/pdf";
 import PdfPage from "./PdfPage";
 import PdfToolbar from "./PdfToolbar";
 import { usePdfSelection } from "../../hooks/usePdfSelection";
+import SelectionAssistant from "../AiPanel/SelectionAssistant";
 
 const MIN_SCALE = 0.5;
 const MAX_SCALE = 3;
@@ -90,13 +91,20 @@ export default function PdfViewer() {
       <section className="selection-summary" aria-label="PDF selection" data-testid="pdf-selection">
         {selection ? <>
           <strong>{"Trang "}{selection.pageNumber}{" / "}{selection.text.length}{" k\u00fd t\u1ef1"}</strong>
-          <p className="selection-text" data-testid="selected-text">{selection.text}</p>
+          <p className="selection-text" data-testid="selected-text">{selection.cleanedText}</p>
+          <details>
+            <summary>Ngữ cảnh và văn bản gốc</summary>
+            <p><strong>Trước: </strong>{selection.context.before || "Đầu trang / cột"}</p>
+            <p><strong>Sau: </strong>{selection.context.after || "Cuối trang / cột"}</p>
+            <p className="selection-text">{selection.rawText}</p>
+          </details>
           <small data-testid="selection-rect">
             x: {selection.rect.x.toFixed(1)}, y: {selection.rect.y.toFixed(1)},
             {" w: "}{selection.rect.width.toFixed(1)}, h: {selection.rect.height.toFixed(1)}
           </small>
         </> : <span>{"B\u00f4i \u0111en ch\u1eef trong PDF \u0111\u1ec3 xem l\u1ef1a ch\u1ecdn."}</span>}
       </section>
+      <SelectionAssistant key={selectionScope} selection={selection} />
     </div>
   );
 }

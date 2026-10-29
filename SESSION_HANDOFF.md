@@ -58,3 +58,17 @@ are repositioned in extracted text; rawText preserves browser output. Test Case 
 subtitle is now below title. Browser regression: word, multiline, Ctrl+A, zoom,
 outside selection and page navigation pass. Native PDF text layer untouched.
 Run: node --experimental-strip-types --test tests/selection-order.test.mjs
+
+## Day 3 implementation (2026-10-30)
+Added cleanup and bounded same-page context utilities, integrated into selection
+preview. Build, lint and 11 utility tests pass. Real-PDF browser acceptance is
+pending. See docs/DAY_03_STATUS.md for scope and limitations. No commit/push.
+
+## Day 4 implementation (2026-10-30)
+Added SelectionToolbar, SelectionAssistant and AiPanel with three mock actions,
+loading/error/retry and question input. Selection controls preserve the excerpt;
+new selections update panel; file/page/zoom changes cancel old mock requests.
+Build/lint/11 utility tests pass. Browser verification used real Test Case 1.pdf,
+including multiline selection, actions, question, error/retry, zoom, navigation
+and phone layout. See docs/DAY_04_STATUS.md for untested cases and preview.
+Vite is running at http://127.0.0.1:5173, started in this task. No commit/push.
