@@ -126,7 +126,7 @@ export function usePdfSelection(rootRef: RefObject<HTMLElement | null>, scopeKey
     document.addEventListener("pointerdown", onPointerDown, options);
     document.addEventListener("scroll", schedule, { ...options, capture: true, passive: true });
     window.addEventListener("resize", schedule, options);
-    // Opening the bottom panel changes the PDF viewport without window resize.
+    // Layout changes can resize the PDF viewport without a window resize.
     const observer = new ResizeObserver(schedule);
     observer.observe(root);
     return () => {

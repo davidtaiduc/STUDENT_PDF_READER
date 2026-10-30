@@ -71,4 +71,35 @@ new selections update panel; file/page/zoom changes cancel old mock requests.
 Build/lint/11 utility tests pass. Browser verification used real Test Case 1.pdf,
 including multiline selection, actions, question, error/retry, zoom, navigation
 and phone layout. See docs/DAY_04_STATUS.md for untested cases and preview.
-Vite is running at http://127.0.0.1:5173, started in this task. No commit/push.
+Vite was stopped at the user's request when ending this session (2026-10-30).
+Next session: finish remaining Day 4 edge/PDF checks, then read docs/DAY_05.md
+before implementing AI integration and streaming. This agent did not commit/push.
+
+## Day 5 implementation (2026-10-31)
+Replaced mock panel responses with local Ollama streaming using installed qwen3:8b.
+Added separate prompts, NDJSON parsing, Stop/retry/errors/model selection and
+loopback Vite dev/preview proxy. Build/lint/20 tests pass. Real browser checks:
+explanation, translation, questions, streaming, partial Stop, invalid model and
+selection/document replacement during requests. See docs/DAY_05_STATUS.md for
+evidence, math/context limitations and remaining manual coverage; setup is in
+docs/OLLAMA_SETUP.md. Day 4 exhaustive edge/layout checks remain incomplete.
+Vite is running at http://127.0.0.1:5173, exec session 36077, started this session.
+Stop only this server when the user ends today's work. No commit or push performed.
+Next: complete outstanding QA, then read docs/DAY_06.md for notes/history/storage.
+
+## Side-by-side layout update (2026-10-31)
+User requested a compact PDF on the left and all translation/AI tasks on the
+right. PdfViewer now uses a two-column workspace; SelectionAssistant is a
+permanent right sidebar with fixed Dịch/Giải thích/Hỏi AI actions, selection
+preview and independently scrolling results. Removed the floating overlay and
+bottom selection/AI panes. PDF initially fits its column (capped at 120%);
+Vừa chiều rộng refits the current page without changing PDF/text-layer geometry.
+Below 860px the panes stack. Browser verified real Case 5 translation, no desktop
+horizontal overflow at fit width, and stacked phone layout at 390x844; viewport
+override reset. Build/lint pass. Preview: docs/SIDE_BY_SIDE_PREVIEW.jpg.
+
+## Session ended (2026-10-31)
+User requested to stop here. Stopped this session's Vite server (exec 36077).
+Latest state: Day 5 local Ollama integration and side-by-side PDF/AI layout saved.
+Resume from remaining QA in docs/DAY_05_STATUS.md before starting Day 6.
+No commit or push performed by this agent.

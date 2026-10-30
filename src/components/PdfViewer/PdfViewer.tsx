@@ -26,6 +26,19 @@ export default function PdfViewer() {
   const selectionScope = `${documentVersion}-${pdf?.fingerprints[0] ?? "empty"}-${currentPage}-${scale}`;
   const selection = usePdfSelection(viewerRef, selectionScope);
 
+  function fittedScale(pageWidth: number) {
+    const root = viewerRef.current;
+    if (!root || !pageWidth) return 1.2;
+    const style = getComputedStyle(root);
+    const available = root.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+    return Math.max(MIN_SCALE, Math.min(MAX_SCALE, Math.floor(available / pageWidth * 100) / 100));
+  }
+
+  function handleFitWidth() {
+    const page = viewerRef.current?.querySelector<HTMLElement>(".pdf-page");
+    if (page?.offsetWidth) setScale(fittedScale(parseFloat(page.style.width) / scale));
+  }
+
   async function handleOpenFile(file: File) {
     const request = ++requestRef.current;
     setDocumentVersion(request);
@@ -50,9 +63,11 @@ export default function PdfViewer() {
       loadingTaskRef.current = task;
       const document = await task.promise;
       if (request !== requestRef.current) return;
+      const firstPage = await document.getPage(1);
+      if (request !== requestRef.current) return;
       setPdf(document);
       setCurrentPage(1);
-      setScale(1.2);
+      setScale(Math.min(1.2, fittedScale(firstPage.getViewport({ scale: 1 }).width)));
     } catch (err) {
       if (request !== requestRef.current) return;
       console.error("PDF loading failed:", err);
@@ -74,13 +89,15 @@ export default function PdfViewer() {
 
   const totalPages = pdf?.numPages ?? 0;
   return (
-    <div className="viewer">
+    <div className="reader-workspace">
+      <section className="viewer" aria-label="Tài liệu PDF">
       <PdfToolbar currentPage={currentPage} totalPages={totalPages} scale={scale}
         onOpenFile={(file) => { void handleOpenFile(file); }}
         onPrev={() => setCurrentPage((page) => Math.max(1, page - 1))}
         onNext={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
         onZoomIn={() => setScale((value) => Math.min(MAX_SCALE, round1(value + STEP)))}
-        onZoomOut={() => setScale((value) => Math.max(MIN_SCALE, round1(value - STEP)))} />
+        onZoomOut={() => setScale((value) => Math.max(MIN_SCALE, round1(value - STEP)))}
+        onFitWidth={handleFitWidth} />
       <div className="document-name" title={fileName}>{fileName || "PDF chỉ được xử lý trên máy của bạn"}</div>
       <div className="viewer-scroll" ref={viewerRef} aria-busy={loading}>
         {loading && <p className="hint" role="status">Đang mở PDF…</p>}
@@ -88,21 +105,6 @@ export default function PdfViewer() {
         {!loading && !error && !pdf && <p className="hint">Chọn “Mở PDF” để bắt đầu đọc tài liệu.</p>}
         {pdf && <PdfPage key={`${pdf.fingerprints[0]}-${currentPage}-${scale}`} pdf={pdf} pageNumber={currentPage} scale={scale} />}
       </div>
-      <section className="selection-summary" aria-label="PDF selection" data-testid="pdf-selection">
-        {selection ? <>
-          <strong>{"Trang "}{selection.pageNumber}{" / "}{selection.text.length}{" k\u00fd t\u1ef1"}</strong>
-          <p className="selection-text" data-testid="selected-text">{selection.cleanedText}</p>
-          <details>
-            <summary>Ngữ cảnh và văn bản gốc</summary>
-            <p><strong>Trước: </strong>{selection.context.before || "Đầu trang / cột"}</p>
-            <p><strong>Sau: </strong>{selection.context.after || "Cuối trang / cột"}</p>
-            <p className="selection-text">{selection.rawText}</p>
-          </details>
-          <small data-testid="selection-rect">
-            x: {selection.rect.x.toFixed(1)}, y: {selection.rect.y.toFixed(1)},
-            {" w: "}{selection.rect.width.toFixed(1)}, h: {selection.rect.height.toFixed(1)}
-          </small>
-        </> : <span>{"B\u00f4i \u0111en ch\u1eef trong PDF \u0111\u1ec3 xem l\u1ef1a ch\u1ecdn."}</span>}
       </section>
       <SelectionAssistant key={selectionScope} selection={selection} />
     </div>

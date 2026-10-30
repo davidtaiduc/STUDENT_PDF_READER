@@ -1,7 +1,9 @@
-# StudyPDF AI - Day 1
+# StudyPDF AI — Day 5
 
 Vite + React + TypeScript PDF viewer. Local files are processed in the browser.
-No AI requests, OCR, backend, persistence, or selection event handlers.
+Includes selection cleanup/context, a PDF pane on the left and an AI task panel on the right
+with real local Ollama streaming for translation, explanation and questions.
+No OCR or persistence. See [Ollama setup](docs/OLLAMA_SETUP.md).
 
 ## Run (PowerShell)
 
@@ -10,6 +12,7 @@ Set-Location 'E:\New folder\student-pdf-reader'
 npm.cmd install
 npm.cmd run build
 npm.cmd run lint
+npm.cmd test
 npm.cmd run dev -- --host 127.0.0.1 --port 5173 --strictPort
 ```
 

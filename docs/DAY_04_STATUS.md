@@ -39,5 +39,5 @@ All six files are present under Kiểm thử/. Browser testing used Test Case 1.
 - KNOWN LIMITATION: mock responses are placeholders, not actual explanations
   or translations. PDF retains horizontal scrolling on narrow screens.
 
-Development server: http://127.0.0.1:5173 (session started for this task).
+Development server: stopped at the user's request at session end (2026-10-30).
 Preview: DAY_04_PREVIEW.jpg.

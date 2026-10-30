@@ -9,6 +9,7 @@ interface PdfToolbarProps {
   onNext: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
+  onFitWidth: () => void;
 }
 
 export default function PdfToolbar({
@@ -20,6 +21,7 @@ export default function PdfToolbar({
   onNext,
   onZoomIn,
   onZoomOut,
+  onFitWidth,
 }: PdfToolbarProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const hasPdf = totalPages > 0;
@@ -60,6 +62,7 @@ export default function PdfToolbar({
       <button aria-label="Phóng to" onClick={onZoomIn} disabled={!hasPdf || scale >= 3}>
         +
       </button>
+      <button onClick={onFitWidth} disabled={!hasPdf}>Vừa chiều rộng</button>
     </div>
   );
 }
