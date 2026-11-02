@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Góp ý dùng thử · StudyPDF AI</title><link rel="stylesheet" href="./help.css"><script src="./feedback.js" defer></script></head>
+<body><main><a href="./">← Mở StudyPDF AI</a><h1>Góp ý sau khi dùng thử</h1>
+<p>Phản hồi được tạo trên thiết bị của bạn. Sao chép hoặc tải tệp rồi gửi cho người mời dùng thử; biểu mẫu này không tự gửi dữ liệu.</p>
+<form id="feedback-form">
+<label>Tác vụ bạn dùng nhiều nhất<select name="preferred"><option>Dịch</option><option>Giải thích</option><option>Hỏi AI</option><option>Ghi chú / lịch sử</option></select></label>
+<label>Mức dễ dùng của thanh tác vụ<select name="toolbar"><option>5 — Rất dễ dùng</option><option>4</option><option>3</option><option>2</option><option>1 — Khó dùng</option></select></label>
+<label>Bôi đen có lấy sai chữ không?<select name="selection"><option>Không gặp</option><option>Thỉnh thoảng</option><option>Thường xuyên</option></select></label>
+<label>AI bắt đầu trả lời sau khoảng bao lâu?<select name="speed"><option>Chưa thử AI / chưa kết nối</option><option>Dưới 3 giây</option><option>3–10 giây</option><option>10–30 giây</option><option>Trên 30 giây</option></select></label>
+<label>Bạn đã dùng lưu ghi chú / lịch sử chưa?<select name="notes"><option>Đã dùng</option><option>Chưa dùng</option><option>Có thử nhưng gặp lỗi</option></select></label>
+<label>Bạn có cần OCR / chọn vùng ảnh không?<select name="ocr"><option>Có</option><option>Chưa cần</option></select></label>
+<label>Bạn có muốn bản ứng dụng desktop không?<select name="desktop"><option>Có</option><option>Bản web đủ dùng</option><option>Chưa rõ</option></select></label>
+<label>Điểm hài lòng tổng thể<select name="overall"><option>5 — Rất hài lòng</option><option>4</option><option>3</option><option>2</option><option>1 — Chưa hài lòng</option></select></label>
+<label>Lỗi hoặc điều muốn cải thiện<textarea name="details" maxlength="5000" placeholder="Mô tả bước thao tác, loại PDF, trang gặp lỗi… Tránh đưa nội dung tài liệu riêng tư."></textarea></label>
+<button type="submit">Tạo phản hồi</button></form>
+<section id="report-section" hidden><h2>Bản phản hồi của bạn</h2><pre id="report"></pre><div class="actions"><button type="button" id="copy-report">Sao chép phản hồi</button><button type="button" id="download-report">Tải tệp phản hồi</button></div><p id="report-status" role="status"></p></section>
+</main></body></html>

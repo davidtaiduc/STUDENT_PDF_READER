@@ -11,13 +11,28 @@ body {
 .app { display: flex; flex-direction: column; height: 100%; }
 
 .app-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 10px 16px;
   font-weight: 700;
   background: #fff;
   border-bottom: 1px solid #d0d5db;
 }
+.app-header nav { display: flex; gap: 16px; font-size: 13px; font-weight: 500; }
+.app-header a { color: #2563eb; text-decoration: none; }
+.app-header a:hover { text-decoration: underline; }
+.app-brand { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; }
+.backend-status { display: flex; align-items: center; gap: 8px; color: #66707a; font-size: 11px; font-weight: 500; }
+.backend-status[data-state="connected"] { color: #197347; }
+.backend-status[data-state="offline"], .backend-status[data-state="no-database"] { color: #9a5711; }
+.backend-status button { border: 1px solid #d0d5db; border-radius: 5px; background: #fff; color: #435469; padding: 3px 7px; cursor: pointer; font: inherit; }
+.backend-status button:disabled { cursor: default; opacity: .6; }
 
 .app-main { flex: 1; min-height: 0; display: flex; }
+.ai-error { margin: 14px 0; padding: 12px 14px; border: 1px solid #e8ce95; border-radius: 8px; background: #fff9ec; color: #674817; }
+.ai-error strong { font-size: 14px; }
+.ai-error p, .ai-wait-hint { font-size: 13px; line-height: 1.65; }
+.ai-error p { margin: 7px 0 0; }
+.ai-wait-hint { color: #66707a; }
 
 .reader-workspace {
   flex: 1; min-width: 0; min-height: 0; display: grid;
@@ -32,6 +47,34 @@ body {
 .assistant-header { padding: 24px 24px 16px; }
 .assistant-header h1 { font-size: 21px; margin: 0 0 6px; color: #172b4d; }
 .assistant-header p { margin: 0; color: #66707a; font-size: 13px; }
+.assistant-header p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.assistant-view, .assistant-content { flex: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; }
+.assistant-view[hidden] { display: none; }
+.study-tabs { display: flex; gap: 8px; margin: 0 24px 16px; }
+.study-tabs button, .selection-summary button, .history-panel button {
+  border: 1px solid #c3c9d0; border-radius: 6px; padding: 7px 12px; background: #f8f9fa; cursor: pointer;
+}
+.study-tabs button { flex: 1; }
+.study-tabs button[aria-pressed="true"] { color: #1d4ed8; border-color: #93b4ee; background: #edf3ff; }
+.assistant-sidebar button:disabled { cursor: default; }
+.storage-warning { font-size: 12px; line-height: 1.6; margin: 0; padding: 8px 16px; color: #805300; background: #fff7df; }
+.save-entry-form { margin: 16px 0; padding-top: 12px; border-top: 1px solid #e4e8ee; }
+.save-entry-form textarea, .history-item textarea { display: block; width: 100%; resize: vertical; min-height: 70px; max-height: 240px; margin: 8px 0; padding: 10px; border: 1px solid #c3c9d0; border-radius: 6px; font: inherit; }
+.save-entry-form label { display: block; font-size: 13px; font-weight: 600; }
+.save-entry-form p { font-size: 13px; line-height: 1.6; }
+.save-entry-form small { display: block; margin-top: 8px; }
+.copy-control small { display: inline-block; margin: 0 8px; font-size: 12px; }
+.history-panel { flex: 1; min-height: 0; overflow: auto; padding: 0 24px 24px; }
+.history-caption { color: #66707a; font-size: 13px; line-height: 1.7; }
+.history-item { border: 1px solid #dce2eb; border-radius: 9px; padding: 14px; margin: 12px 0; overflow-wrap: anywhere; }
+.history-item summary { cursor: pointer; font-weight: 600; }
+.history-item summary small { display: block; margin: 6px 0 0 16px; font-weight: 400; color: #66707a; font-size: 11px; }
+.history-item blockquote { margin: 12px 0; padding: 10px; background: #f1f5fb; border-left: 3px solid #2563eb; white-space: pre-wrap; max-height: 180px; overflow: auto; font-size: 13px; }
+.history-item .saved-note { white-space: pre-wrap; line-height: 1.7; }
+.study-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; }
+.delete-entry { margin-top: 8px; color: #a12828; }
+.delete-confirm { background: #fff4f4; padding: 12px; margin-top: 12px; border-radius: 6px; }
+.delete-confirm button { margin-right: 8px; }
 .assistant-empty { max-width: 340px; margin: 64px auto; text-align: center; color: #66707a; }
 .assistant-empty-icon { display: inline-block; padding: 12px 18px; border-radius: 14px; background: #edf3ff; color: #2563eb; font-size: 26px; }
 .assistant-empty h2 { font-size: 17px; color: #172b4d; margin-top: 20px; }
@@ -58,6 +101,13 @@ body {
 .toolbar button:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .toolbar-text { min-width: 90px; text-align: center; font-size: 14px; }
+.page-number-control { display: inline-flex; position: relative; align-items: center; }
+.page-indicator { display: inline-flex; align-items: center; justify-content: center; gap: 4px; white-space: nowrap; }
+.page-indicator input { box-sizing: content-box; min-width: 2ch; max-width: 10ch; padding: 3px 2px; border: 1px solid transparent; border-radius: 4px; text-align: center; font: inherit; background: transparent; color: inherit; }
+.page-indicator input:not(:disabled):hover { background: #edf3ff; border-color: #bdcde6; }
+.page-indicator input:focus { outline: 2px solid #2563eb; outline-offset: 1px; background: #fff; }
+.page-indicator input[aria-invalid="true"] { border-color: #b42318; }
+.page-number-error { position: absolute; top: calc(100% + 6px); left: 0; z-index: 5; min-width: 190px; padding: 7px 9px; border: 1px solid #f1c0b8; border-radius: 5px; background: #fff4f2; color: #9a2419; font-size: 12px; }
 .toolbar-sep { width: 1px; height: 22px; background: #d0d5db; margin: 0 6px; }
 
 .viewer-scroll { flex: 1; overflow: auto; padding: 16px; scrollbar-gutter: stable; }
@@ -146,6 +196,8 @@ button:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
   .reader-workspace { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(240px, 1.1fr) minmax(220px, 1fr); overflow: auto; }
   .assistant-sidebar { border-left: 0; border-top: 1px solid #d0d5db; }
   .assistant-header { padding: 16px 18px 12px; }
+  .study-tabs { margin: 0 18px 12px; }
+  .history-panel { padding: 0 18px 18px; }
   .selection-toolbar { margin: 0 18px 12px; }
   .assistant-empty { margin: 20px auto; }
 }

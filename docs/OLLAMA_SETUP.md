@@ -1,4 +1,6 @@
-# Ollama local setup
+# Thiết lập AI cũ
+
+Ứng dụng đã chuyển sang Gemini qua backend Node.js và MongoDB. Xem [GEMINI_SETUP.md](GEMINI_SETUP.md) để cấu hình phiên bản hiện tại. Phần bên dưới chỉ ghi lại cách chạy phiên bản Ollama trước đây.
 
 1. Open Ollama on this computer. Run `ollama list` to inspect installed models.
    The tested model is `qwen3:8b`; if missing, install it yourself with

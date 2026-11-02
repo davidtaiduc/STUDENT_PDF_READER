@@ -1,13 +1,8 @@
-import type { AiAction } from "../../types/ai.ts";
-
-export interface AiExcerpt {
-  cleanedText: string;
-  context: { before: string; after: string };
-}
+import type { AiAction, AiExcerpt } from "../../../../shared/types/ai.ts";
 
 const instructions: Record<AiAction, string> = {
   translate: "Dịch chính xác CHỈ trường selectedText sang tiếng Việt. Nếu đã là tiếng Việt, giữ nguyên. Chỉ trả bản dịch, không thêm lời dẫn hay dịch ngữ cảnh. Nếu đoạn bị cắt giữa câu hoặc từ, không tự hoàn thành câu bằng nội dung từ contextBefore/contextAfter.",
-  explain: "Giải thích ngắn gọn bằng tiếng Việt ý nghĩa và thuật ngữ trong đoạn được chọn, phù hợp cho sinh viên. Không mở rộng sang nội dung không liên quan.",
+  explain: "Giải thích bằng tiếng Việt CHỈ nội dung trong trường selectedText, phù hợp cho sinh viên. Tối đa 5 câu ngắn. Nếu chỉ chọn một từ, chỉ giải thích từ đó trong 1–2 câu. Tuyệt đối không liệt kê hoặc giải thích thuật ngữ chỉ xuất hiện trong contextBefore/contextAfter; hai trường này chỉ giúp xác định nghĩa của đoạn chọn.",
   ask: "Trả lời câu hỏi bằng tiếng Việt dựa trên đoạn được chọn. Nếu đoạn và ngữ cảnh không đủ để trả lời, nói rõ điều đó; không bịa dữ kiện.",
 };
 

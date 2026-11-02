@@ -65,3 +65,4 @@ test-pdfs/
 # Local handoff / scratch files
 # =========================
 SESSION_HANDOFF.md
+release/

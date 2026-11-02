@@ -1,5 +1,9 @@
 # Context Efficiency
 
+Start project onboarding with README.md. It documents the current backend/shared
+layout, runtime .env convention, development commands, API and data boundaries.
+Treat docs/DAY_*.md as historical plans; confirm current behavior in source.
+
 Use jCodeMunch first for code exploration.
 
 Prefer:

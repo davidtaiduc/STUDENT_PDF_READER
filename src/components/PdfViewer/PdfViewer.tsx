@@ -4,7 +4,9 @@ import { pdfjsLib, pdfAssetBase } from "../../lib/pdf";
 import PdfPage from "./PdfPage";
 import PdfToolbar from "./PdfToolbar";
 import { usePdfSelection } from "../../hooks/usePdfSelection";
-import SelectionAssistant from "../AiPanel/SelectionAssistant";
+import StudySidebar from "../Study/StudySidebar";
+import { hashPdf } from "../../services/storage/hashPdf";
+import { putDocument } from "../../services/storage/studyStore";
 
 const MIN_SCALE = 0.5;
 const MAX_SCALE = 3;
@@ -21,6 +23,8 @@ export default function PdfViewer() {
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState("");
   const [documentVersion, setDocumentVersion] = useState(0);
+  const [documentHash, setDocumentHash] = useState<string | null>(null);
+  const [storageWarning, setStorageWarning] = useState("");
 
   const viewerRef = useRef<HTMLDivElement>(null);
   const selectionScope = `${documentVersion}-${pdf?.fingerprints[0] ?? "empty"}-${currentPage}-${scale}`;
@@ -45,6 +49,8 @@ export default function PdfViewer() {
     const previousTask = loadingTaskRef.current;
     loadingTaskRef.current = null;
     setPdf(null);
+    setDocumentHash(null);
+    setStorageWarning("");
     setLoading(true);
     setError(null);
     setFileName(file.name);
@@ -52,6 +58,11 @@ export default function PdfViewer() {
       await previousTask?.destroy();
       if (request !== requestRef.current) return;
       const data = await file.arrayBuffer();
+      if (request !== requestRef.current) return;
+      const hash = await hashPdf(data).catch(() => {
+        if (request === requestRef.current) setStorageWarning("Không nhận diện được tài liệu để lưu lịch sử. Bạn vẫn có thể đọc PDF và dùng AI.");
+        return null;
+      });
       if (request !== requestRef.current) return;
       const task = pdfjsLib.getDocument({
         data,
@@ -66,8 +77,16 @@ export default function PdfViewer() {
       const firstPage = await document.getPage(1);
       if (request !== requestRef.current) return;
       setPdf(document);
+      setDocumentHash(hash);
       setCurrentPage(1);
       setScale(Math.min(1.2, fittedScale(firstPage.getViewport({ scale: 1 }).width)));
+      if (hash) {
+        try {
+          await putDocument({ hash, name: file.name, size: file.size, pageCount: document.numPages, lastOpenedAt: Date.now() });
+        } catch {
+          if (request === requestRef.current) setStorageWarning("Không lưu được thông tin tài liệu. Kiểm tra quyền lưu trữ và dung lượng trình duyệt.");
+        }
+      }
     } catch (err) {
       if (request !== requestRef.current) return;
       console.error("PDF loading failed:", err);
@@ -95,10 +114,12 @@ export default function PdfViewer() {
         onOpenFile={(file) => { void handleOpenFile(file); }}
         onPrev={() => setCurrentPage((page) => Math.max(1, page - 1))}
         onNext={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+        onPageChange={(page) => setCurrentPage(Math.max(1, Math.min(totalPages, page)))}
         onZoomIn={() => setScale((value) => Math.min(MAX_SCALE, round1(value + STEP)))}
         onZoomOut={() => setScale((value) => Math.max(MIN_SCALE, round1(value - STEP)))}
         onFitWidth={handleFitWidth} />
-      <div className="document-name" title={fileName}>{fileName || "PDF chỉ được xử lý trên máy của bạn"}</div>
+      <div className="document-name" title={fileName}>{fileName || "Mở PDF trên máy để bắt đầu đọc"}</div>
+      {storageWarning && <p className="storage-warning" role="status">{storageWarning}</p>}
       <div className="viewer-scroll" ref={viewerRef} aria-busy={loading}>
         {loading && <p className="hint" role="status">Đang mở PDF…</p>}
         {error && <p className="hint error" role="alert">{error}</p>}
@@ -106,7 +127,9 @@ export default function PdfViewer() {
         {pdf && <PdfPage key={`${pdf.fingerprints[0]}-${currentPage}-${scale}`} pdf={pdf} pageNumber={currentPage} scale={scale} />}
       </div>
       </section>
-      <SelectionAssistant key={selectionScope} selection={selection} />
+      <StudySidebar key={documentVersion} documentHash={documentHash} fileName={fileName}
+        selection={selection}
+        onNavigate={(page) => setCurrentPage(Math.max(1, Math.min(totalPages, page)))} />
     </div>
   );
 }

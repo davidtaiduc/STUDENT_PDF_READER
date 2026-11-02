@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hướng dẫn · StudyPDF AI</title><link rel="stylesheet" href="./help.css"></head>
+<body><main>
+<a href="./">← Mở StudyPDF AI</a>
+<h1>Đọc PDF, hiểu và ghi nhớ</h1>
+<p class="muted">Hướng dẫn dùng thử MVP · Ngày 7</p>
+<ol>
+<li><strong>Mở PDF:</strong> chọn file trên máy. PDF ở bên trái; dùng nút chuyển trang, zoom hoặc Vừa chiều rộng. Bấm trực tiếp vào số trong “Trang 1 / …”, nhập trang muốn đến rồi nhấn Enter. Escape khôi phục số trang hiện tại.</li>
+<li><strong>Bôi đen đoạn cần đọc:</strong> kiểm tra đoạn đã chọn trong bảng bên phải.</li>
+<li><strong>Chọn tác vụ:</strong> Dịch sang tiếng Việt, Giải thích hoặc Hỏi AI. Hỏi AI cần nhập câu hỏi rồi bấm Gửi.</li>
+<li><strong>Đọc kết quả:</strong> phản hồi hiện dần. Dừng để hủy; Thử lại để tạo lại phản hồi.</li>
+<li><strong>Đọc tiếp tài liệu:</strong> chuyển trang và zoom vẫn giữ bài giải, câu hỏi và ghi chú đang soạn. Bôi đen đoạn mới hoặc chọn tác vụ khác để làm việc với nội dung mới; mở PDF khác sẽ bắt đầu phiên trợ lý mới.</li>
+<li><strong>Lưu để học:</strong> nhập ghi chú cho đoạn chọn hoặc bấm Lưu kết quả khi AI hoàn tất. Tab Lịch sử có nút sao chép, sửa ghi chú và quay lại trang gốc.</li>
+</ol>
+<h2>Thiết lập AI trên bản web</h2>
+<div class="notice">Phần đọc PDF và ghi chú hoạt động trong trình duyệt. Khi chạy tác vụ AI, đoạn chọn, ngữ cảnh lân cận và câu hỏi được gửi qua backend tới Google Gemini. Không gửi toàn bộ file PDF.</div>
+<ol>
+<li>Bôi đen đoạn cần xử lý rồi chọn Dịch hoặc Giải thích để chạy ngay, không cần nhập mã.</li>
+<li>Với Hỏi AI, nhập câu hỏi về đoạn chọn rồi bấm Gửi. Tài khoản người dùng sẽ được bổ sung sau.</li>
+<li>Gemini API key được người quản trị giữ trên server. Không nhập API key Google vào website hoặc gửi trong phiếu góp ý.</li>
+<li>Nếu hết hạn mức hoặc dịch vụ mất kết nối, đợi rồi Thử lại. Đọc PDF, ghi chú và sao chép vẫn dùng được.</li>
+</ol>
+<p>Kết quả AI có thể sai; kiểm tra lại công thức và thông tin quan trọng. Mỗi lượt chạy hoặc thử lại có thể được tính vào hạn mức.</p>
+<p>Nếu Gemini nhận quá nhiều yêu cầu trong thời gian ngắn, ứng dụng sẽ báo rõ nguồn giới hạn và hiển thị nút Thử lại kèm thời gian chờ. Khi xác nhận hết hạn mức trong ngày, ứng dụng sẽ hướng dẫn quay lại sau thay vì khuyến khích bấm liên tục. Bạn vẫn đọc PDF và ghi chú được trong lúc chờ.</p>
+<h2>Lịch sử nằm ở đâu?</h2>
+<p>Lịch sử được lưu trong trình duyệt hiện tại, theo nội dung PDF. Tải lại trang rồi mở lại cùng file sẽ thấy các mục đã lưu, kể cả khi đổi tên file. File PDF không được lưu lại; cần tự mở lại sau refresh.</p>
+<p>Đổi trình duyệt, profile hoặc địa chỉ website sẽ có vùng lịch sử riêng. Xóa dữ liệu website có thể xóa ghi chú. Hiện chưa có đồng bộ hoặc sao lưu tự động.</p>
+<h2>Giới hạn bản thử</h2>
+<ul><li>PDF scan/ảnh không có lớp chữ: xem được trang nhưng không bôi đen; chưa có OCR.</li><li>Bố cục hai cột, bảng, font đặc biệt, chỉ số trên/dưới và mã nguồn có thể trích xuất chưa đúng. Kiểm tra đoạn chọn trước khi gửi AI.</li><li>Mỗi lần xử lý tối đa 12.000 ký tự được chọn; không dịch toàn bộ PDF.</li><li>Kết quả hiển thị dạng văn bản, chưa dựng công thức LaTeX/Markdown.</li></ul>
+<h2>Gửi phản hồi dùng thử</h2><p>Mở <a href="./feedback.html">phiếu góp ý</a>, tạo bản phản hồi rồi sao chép hoặc tải tệp để gửi cho người mời bạn thử ứng dụng.</p>
+</main></body></html>

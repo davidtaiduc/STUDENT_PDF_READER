@@ -1,14 +1,20 @@
-# Student PDF Reader — 7 Day Plan
+# Tài liệu Student PDF Reader
 
-Thư mục này chứa kế hoạch triển khai và checklist kiểm thử cho MVP 7 ngày.
+Đọc [README chính](../README.md) và [AGENTS.md](../AGENTS.md) trước khi tiếp quản. README chính là bản đồ kiến trúc, lệnh chạy và hợp đồng dữ liệu hiện tại. Các tài liệu Day là lịch sử phát triển, không phải cấu hình runtime mới nhất.
 
-## Cách dùng với Ollama / Continue
-Mỗi ngày:
-1. Mở đúng project trong VS Code.
-2. Thêm file `docs/DAY_0X.md` vào context của Continue.
-3. Yêu cầu model đọc file đó trước khi code hoặc kiểm thử.
-4. Cuối ngày, dùng phần `Prompt kiểm thử cuối ngày` trong file tương ứng.
-5. Lưu kết quả test vào `docs/DAY_0X_TEST.md` nếu muốn.
+## Tài liệu hiện tại
+
+- [Backend](../backend/README.md), [Shared](../shared/README.md): ranh giới và cấu trúc mã.
+- [Gemini setup](GEMINI_SETUP.md): cấu hình `.env`, AI và MongoDB.
+- [Study storage](STUDY_STORAGE.md): ghi chú/lịch sử IndexedDB.
+- [PDF navigation](PDF_NAVIGATION_FIX.md): giữ bài giải khi chuyển trang/zoom, sửa số trang trực tiếp.
+- [AI migration status](GEMINI_MIGRATION_STATUS.md): nhật ký cập nhật Gemini; đọc mục mới trước mục cũ.
+- [Git/hosting](GIT_HOSTING.md): CI đã chuẩn bị, giới hạn Preview tĩnh và phần triển khai còn thiếu.
+- [PDF suite](TEST_PDF_SUITE.md): quy tắc fixture; kiểm kê lại file thật, PDF riêng không có trong Git.
+
+## Tài liệu lịch sử
+
+Ollama không còn là runtime AI. Các đề cập Ollama, floating toolbar hoặc `server/` trong kế hoạch Day phản ánh thiết kế cũ; không tự khôi phục chúng. Khi dùng checklist cũ, đối chiếu README và mã hiện tại rồi điều chỉnh phạm vi test.
 
 ## Roadmap
 - Day 01: PDF Viewer Foundation

@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 interface PdfToolbarProps {
   currentPage: number;
@@ -7,9 +7,43 @@ interface PdfToolbarProps {
   onOpenFile: (file: File) => void;
   onPrev: () => void;
   onNext: () => void;
+  onPageChange: (page: number) => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onFitWidth: () => void;
+}
+
+function PageNumber({ currentPage, totalPages, onPageChange }: {
+  currentPage: number; totalPages: number; onPageChange: (page: number) => void;
+}) {
+  const [value, setValue] = useState(String(totalPages ? currentPage : 0));
+  const [error, setError] = useState("");
+  const commit = (restoreInvalid: boolean) => {
+    const page = /^\d+$/.test(value.trim()) ? Number(value.trim()) : NaN;
+    if (!Number.isSafeInteger(page) || page < 1 || page > totalPages) {
+      setError(`Nhập số trang từ 1 đến ${totalPages}.`);
+      if (restoreInvalid) setValue(String(currentPage));
+      return;
+    }
+    setValue(String(page)); setError("");
+    if (page !== currentPage) onPageChange(page);
+  };
+  return <span className="page-number-control">
+    <span className="toolbar-text page-indicator">
+      <label>Trang <input aria-label="Số trang" type="text" inputMode="numeric" maxLength={10}
+        value={value} disabled={!totalPages} aria-invalid={!!error} aria-describedby={error ? 'page-number-error' : undefined}
+        title="Nhập số trang rồi nhấn Enter" style={{ width: `${Math.max(2, String(totalPages).length, value.length)}ch` }}
+        onFocus={event => event.currentTarget.select()}
+        onChange={event => { setValue(event.target.value); setError(""); }}
+        onBlur={() => { if (totalPages) commit(true); }}
+        onKeyDown={event => {
+          if (event.key === 'Enter') { event.preventDefault(); commit(false); }
+          if (event.key === 'Escape') { event.preventDefault(); setValue(String(currentPage)); setError(""); }
+        }} /></label>
+      <span> / {totalPages}</span>
+    </span>
+    {error && <span id="page-number-error" className="page-number-error" role="alert">{error}</span>}
+  </span>;
 }
 
 export default function PdfToolbar({
@@ -19,6 +53,7 @@ export default function PdfToolbar({
   onOpenFile,
   onPrev,
   onNext,
+  onPageChange,
   onZoomIn,
   onZoomOut,
   onFitWidth,
@@ -46,9 +81,7 @@ export default function PdfToolbar({
       <button aria-label="Trang trước" onClick={onPrev} disabled={!hasPdf || currentPage <= 1}>
         ←
       </button>
-      <span className="toolbar-text">
-        Trang {hasPdf ? currentPage : 0} / {totalPages}
-      </span>
+      <PageNumber key={`${currentPage}-${totalPages}`} currentPage={currentPage} totalPages={totalPages} onPageChange={onPageChange} />
       <button aria-label="Trang sau" onClick={onNext} disabled={!hasPdf || currentPage >= totalPages}>
         →
       </button>
