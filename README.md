@@ -31,7 +31,7 @@ README này là điểm bắt đầu cho lập trình viên và AI tiếp quản
 |---|---|
 | Đọc PDF | Mở file local, vẽ một trang mỗi lần, chuyển trước/sau, sửa trực tiếp số trang để nhảy nhanh, zoom, vừa chiều rộng |
 | Chọn văn bản | Lớp chữ PDF.js, sắp xếp đoạn trích, chuẩn hóa khoảng trắng/nối từ ngắt dòng, lấy ngữ cảnh lân cận |
-| AI | Dịch, giải thích và hỏi về đoạn chọn; stream kết quả từ Gemini qua backend; dừng và thử lại |
+| AI | Dịch, giải thích; Hỏi AI theo hội thoại nhiều lượt tự lưu theo PDF; stream Gemini, dừng và thử lại |
 | Trải nghiệm | Đổi trang/zoom giữ nguyên bài giải và ghi chú đang soạn; lỗi AI có thông báo theo nguyên nhân và đếm ngược khi cần chờ |
 | Học tập | Lưu ghi chú/kết quả, xem lịch sử, sửa ghi chú, sao chép, xóa có xác nhận, quay về trang nguồn |
 | Lưu trữ local | IndexedDB, phân biệt tài liệu bằng SHA-256 thay vì tên file |
@@ -44,7 +44,7 @@ README này là điểm bắt đầu cho lập trình viên và AI tiếp quản
 - Đồng bộ ghi chú/lịch sử lên MongoDB hoặc giữa thiết bị.
 - OCR cho PDF scan/ảnh không có lớp chữ.
 - Dịch toàn bộ PDF hoặc hỏi đáp dựa trên toàn bộ tài liệu/RAG.
-- Hiển thị Markdown/LaTeX; kết quả hiện là văn bản thuần.
+- Chuẩn hóa delimiter LaTeX `\[...\]` / `\(...\)`; hiện chỉ hỗ trợ `$...$` / `$$...$$`.
 - Xuất/nhập bản sao lưu ghi chú.
 - Triển khai đầy đủ frontend + backend lên hosting; CI chưa có bước deploy.
 - Kiểm thử tải để khẳng định số người dùng đồng thời.
@@ -101,25 +101,29 @@ MAX_CONCURRENT_REQUESTS=3
 node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"
 ```
 
-### Bước 3: chạy hai tiến trình
+### Bước 3: chạy ứng dụng
 
-Terminal thứ nhất, từ thư mục gốc:
+Từ thư mục gốc, chỉ cần một terminal:
+
+```sh
+npm run dev
+```
+
+Lệnh chạy đồng thời backend và frontend, log có nhãn `backend` / `frontend`.
+Đợi backend sẵn sàng và MongoDB kết nối; API mặc định tại `http://127.0.0.1:3001`.
+Frontend tại **http://127.0.0.1:5173**. Ctrl+C dừng cả hai; nếu một tiến trình thoát,
+tiến trình còn lại cũng được dừng để tránh ứng dụng chạy thiếu một phần.
+
+Nếu cần chạy riêng để debug, dùng hai terminal tại gốc:
 
 ```sh
 npm run dev:backend
-```
-
-Đợi thông báo backend sẵn sàng và MongoDB đã kết nối. Cổng mặc định là `http://127.0.0.1:3001`.
-
-Terminal thứ hai, cũng từ thư mục gốc:
-
-```sh
 npm run dev:frontend -- --host 127.0.0.1 --port 5173 --strictPort
 ```
 
-Mở **http://127.0.0.1:5173**. Giữ cả hai terminal chạy; Ctrl+C dừng tiến trình tương ứng.
-
-**`npm run dev` chỉ chạy frontend. Nó không tự khởi động backend hoặc database.** `npm run server` là alias cho backend dev. Đừng khởi động nhiều tiến trình cùng cổng; cũng đừng tự dừng tiến trình của người khác để lấy cổng.
+`npm run dev` không khởi động MongoDB: database trong `.env` vẫn phải truy cập được.
+`npm run server` là alias cho backend dev. Không chạy lệnh chung cùng lúc với các tiến trình riêng
+đang dùng cùng cổng. Frontend dùng strictPort để báo lỗi thay vì âm thầm đổi origin.
 
 ### Bước 4: kiểm tra kết nối
 
@@ -161,7 +165,7 @@ Tất cả lệnh chạy từ thư mục gốc. `backend/` hiện không có pac
 | Lệnh | Công việc |
 |---|---|
 | `npm run dev:frontend` | Chạy Vite; pre-hook đồng bộ PDF.js assets |
-| `npm run dev` | Alias frontend theo cách dùng cũ |
+| `npm run dev` | Chạy frontend + backend chung terminal; Ctrl+C dừng cả hai |
 | `npm run dev:backend` | Chạy Node backend với `.env` và `--development` |
 | `npm run server` | Alias cho `dev:backend` |
 | `npm run server:production` | Chạy API có quota; không tự build hoặc phục vụ frontend |
@@ -240,7 +244,7 @@ Hạn mức khi bật quota → MongoDB, chỉ lưu bộ đếm theo thời gian
 
 ### Những dữ liệu được gửi đi
 
-- Google nhận đoạn chọn, tối đa 650 ký tự ngữ cảnh mỗi phía, câu hỏi nếu có và system prompt do backend tạo.
+- Google nhận đoạn chọn, tối đa 650 ký tự ngữ cảnh mỗi phía, câu hỏi nếu có và system prompt do backend tạo. Hỏi AI còn gửi phần hội thoại gần nhất có giới hạn như mô tả ở mục Hội thoại Hỏi AI.
 - Ứng dụng không upload nguyên PDF để gọi Gemini. Bản dịch/giải thích không có toàn bộ tài liệu làm ngữ cảnh.
 - Backend không ghi PDF, prompt, câu hỏi hoặc kết quả vào MongoDB theo luồng hiện tại.
 - `store:false` trong lời gọi Interactions yêu cầu luồng không dùng trạng thái hội thoại lưu trên provider; không được diễn giải thành lời hứa về toàn bộ chính sách lưu dữ liệu của Google.
@@ -346,6 +350,65 @@ Lỗi trước stream trả HTTP 4xx/5xx và JSON có trường `error`, có th�
 - Dừng, đổi đoạn hoặc unmount hủy request. Đổi page/zoom PDF không được unmount phiên AI đang đọc.
 
 ## Ghi chú, lịch sử và nhận diện tài liệu
+
+### Hội thoại Hỏi AI
+
+Sidebar có hai tab cạnh nhau: **Trợ lý** cho Dịch/Giải thích, **AI** cho hội thoại.
+Nút **Lịch sử (số phiên)** nằm riêng ở góc tiêu đề. Đóng Lịch sử quay về tab trước đó,
+giữ nguyên đoạn chọn, câu hỏi đang soạn và stream; chuyển tab không tự gọi AI.
+
+Dịch/Giải thích chỉ gọi AI khi bấm nút tác vụ (hoặc Thử lại). Đoạn tô đen hiển thị trước,
+các nút Dịch/Giải thích/Hỏi AI nằm ngay bên dưới, không còn thanh tác vụ cố định phía trên.
+Tô đen đoạn khác sẽ xóa kết quả tạm cũ và hủy stream cũ nếu còn chạy; không tự gọi AI cho đoạn mới.
+Chuyển qua Hỏi AI rồi quay lại cũng không gọi lại Dịch/Giải thích.
+
+**Quy ước hiện tại:** hội thoại đang mở được giữ như bản nháp local. Bấm **Lưu đoạn chat vào lịch sử**
+để cất toàn bộ cuộc trò chuyện thành một phiên; chỉ sau khi IndexedDB commit mới làm trống
+khung Hỏi AI. Lịch sử hiển thị các phiên đã lưu theo PDF, có thể mở xem toàn bộ lượt bên trong.
+Nút lưu bị khóa trong lúc AI trả lời; có thể Dừng rồi lưu cả phần đã nhận. Lỗi lưu không làm mất chat.
+Phiên mới không gửi các phiên đã lưu làm ngữ cảnh. Số trên tab Lịch sử là số phiên đã lưu.
+Dịch/Giải thích là tác vụ tạm, không có nút lưu vào Lịch sử.
+Phiên mới có tên mặc định **Đoạn chat 1, Đoạn chat 2, …** theo từng PDF. Trong Lịch sử,
+bấm **Đổi tên**, nhập tên (1–100 ký tự), rồi **Lưu tên**; tên được giữ khi mở lại.
+Tên các phiên đã lưu từ phiên bản cũ không bị tự ghi đè.
+Dữ liệu ghi chú/dịch/giải thích cũ vẫn được giữ trong database cũ để tránh xóa mất dữ liệu,
+nhưng không hiển thị trong Lịch sử mới. Các mô tả CRUD ghi chú ở phần dưới là tính năng cũ.
+
+Đoạn tô đen trong PDF được hiển thị nguyên văn trong khung **Đoạn đã chọn trong PDF**
+ngay trên ô nhập câu hỏi. Chuyển focus sang ô hỏi hoặc đổi trang/zoom không xóa đoạn đã giữ.
+Chọn đoạn khác trong PDF sẽ cập nhật khung này; khi gửi, câu hỏi dùng đoạn đang hiển thị.
+Nếu không tạo được documentHash, vẫn có thể hỏi bằng hội thoại tạm nhưng không tự lưu;
+giao diện thông báo rõ trường hợp này.
+
+Hỏi AI giữ nhiều lượt câu hỏi/câu trả lời theo PDF, tự lưu vào IndexedDB riêng
+`student-pdf-reader-chat` v1, store `conversations` theo documentHash. Mở lại cùng PDF
+và bấm **Mở hội thoại đã lưu** để đọc hoặc hỏi tiếp. Không cần bấm Lưu kết quả cho từng lượt chat.
+Đây là dữ liệu local theo origin/profile, chưa đồng bộ MongoDB hoặc tài khoản.
+
+Mỗi lượt giữ đoạn nguồn, số trang, source câu hỏi/trả lời và trạng thái. Đổi đoạn chọn,
+đổi trang/zoom hoặc chuyển sang Dịch/Giải thích không xóa chat; đoạn mới chỉ áp dụng cho câu hỏi mới.
+Gửi câu hỏi bằng Enter, xuống dòng bằng Shift+Enter; không có retry AI tự động.
+Stop giữ partial text; lượt đang chạy khi đóng trang được khôi phục thành đã dừng.
+Snapshot lưu theo nhịp 500ms, nên đóng tab/crash đột ngột có thể mất phần vừa nhận chưa kịp ghi.
+Nếu lưu trữ bị chặn/hết dung lượng, UI báo lỗi và cho thử lại.
+
+`POST /api/ai` có thêm `history` tùy chọn cho `ask`: mảng `{question, answer}`.
+Client chỉ gửi lượt hoàn tất gần nhất, tối đa 6 cặp/6.000 ký tự, mỗi trường tối đa 2.000 ký tự;
+backend kiểm tra lại trước quota/provider. Toàn bộ hội thoại vẫn nằm trong trình duyệt;
+ngữ cảnh gửi Google chỉ là phần giới hạn này cùng đoạn nguồn hiện tại. History nằm trong JSON
+user content, không được dùng làm system role; không đổi prompt delimiter LaTeX.
+Các API client cũ không gửi history vẫn hoạt động. Không đổi schema ghi chú hiện có.
+
+Giới hạn hiện tại: một hội thoại/PDF, chưa có danh sách nhiều phiên hay đồng bộ thiết bị.
+Không sửa cùng hội thoại ở nhiều tab đồng thời (snapshot ghi sau có thể thay bản trước).
+Các lượt Hỏi AI cũ chỉ lưu thủ công trong Lịch sử học tập không được tự nhập sang chat.
+
+Có thể tô đen chữ ngay trong một câu trả lời AI (kể cả kết quả đã lưu trong Lịch sử).
+Vùng chọn này được nhận riêng với thông báo **Đã chọn từ kết quả AI** và dùng cho lần
+bấm Dịch/Giải thích/Hỏi AI tiếp theo; chỉ tô đen không tự chạy hoặc xóa bài trả lời.
+Chọn lại đoạn PDF sẽ thay vùng chọn AI. Phạm vi chọn phải nằm trong cùng một câu trả lời,
+không kéo qua nhiều tin nhắn/nút/ô nhập. Số trang giữ trang nguồn của câu trả lời.
+
 
 Hai nơi lưu trữ có mục đích riêng:
 
@@ -460,7 +523,7 @@ Có workflow trong mã không chứng minh nó đã chạy trên GitHub. Phải 
 
 | Triệu chứng | Kiểm tra và hành động |
 |---|---|
-| PDF đọc được nhưng AI không chạy | `npm run dev` chỉ chạy UI; cần terminal backend còn sống |
+| PDF đọc được nhưng AI không chạy | Dùng `npm run dev` để chạy cả hai; nếu chạy `dev:frontend` riêng thì cần backend riêng |
 | Frontend 502 / ECONNREFUSED | Kiểm tra backend thực sự listen đúng PORT, không chỉ terminal có dòng lệnh khởi chạy; đợi thông báo ready |
 | Header báo chưa kết nối | Chạy `check:backend`, bấm Kiểm tra hoặc tải lại sau khi backend sẵn sàng |
 | Backend dừng ngay khi khởi động | Đọc lỗi cấu hình/MongoDB trong terminal; không in cả `.env` để tìm lỗi |
@@ -536,6 +599,11 @@ OnePortal là nơi quản lý dịch vụ; có tài khoản OnePortal/Preview On
 Người dùng muốn tự duyệt lựa chọn và tự điền các thông tin cơ bản như tài khoản, secret hoặc gói hosting. AI hướng dẫn rõ tên file/trường cần điền; tập trung sửa mã và kiểm thử. Không âm thầm thay giá trị `.env` người dùng đang nhập, tự mua dịch vụ hoặc tự push/publish khi chưa được yêu cầu.
 
 ## Việc phát triển tiếp theo
+
+Day 8 (03/11/2026): `AiResponse` dùng chung cho kết quả AI và lịch sử. `translate`
+giữ plain text; `explain`/`ask` render Markdown + KaTeX. Lưu/copy vẫn là source string,
+không đổi IndexedDB/API/backend prompt. Xem [DAY_08_STATUS.md](docs/DAY_08_STATUS.md)
+để biết bảo mật, giới hạn tiền tệ/delimiter, dependency override và QA còn thiếu.
 
 Các mục dưới là đề xuất/kế hoạch, **không phải chức năng đã tồn tại**:
 

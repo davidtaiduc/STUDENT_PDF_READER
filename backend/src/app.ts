@@ -5,6 +5,7 @@ import type { AiAction } from '../../shared/types/ai.ts';
 import type { BackendHealth } from '../../shared/types/backend.ts';
 import type { Authenticate, Principal } from './auth/appToken.ts';
 import { AiRequestError } from '../../shared/ai/errors.ts';
+import { validateChatContext } from '../../shared/ai/chat.ts';
 
 export interface ApiOptions {
   authenticate: Authenticate; origins: string[]; model: string; maxConcurrent: number;
@@ -72,7 +73,8 @@ export function createApi(options: ApiOptions) {
           || typeof input.selectedText !== 'string' || typeof input.before !== 'string' || typeof input.after !== 'string'
           || typeof input.question !== 'string' || input.before.length > 650 || input.after.length > 650) throw new Error('Dữ liệu gửi không hợp lệ.');
         messages = buildMessages(input.action as AiAction, { cleanedText: input.selectedText,
-          context: { before: input.before, after: input.after } }, input.question);
+          context: { before: input.before, after: input.after } }, input.question,
+          validateChatContext(input.history));
       } catch (error) { fail(400, error instanceof SyntaxError ? 'JSON không hợp lệ.' : error instanceof Error ? error.message : 'Dữ liệu không hợp lệ.'); return; }
       let allowed;
       try { allowed = await options.consumeQuota(principal); }

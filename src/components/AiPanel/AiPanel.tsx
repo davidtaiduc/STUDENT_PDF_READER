@@ -4,12 +4,12 @@ import type { AiAction } from "../../types/ai";
 import type { PdfSelection } from "../../types/selection";
 import { streamGemini } from "../../services/ai/gemini";
 import { AiRequestError, aiErrorTitle, formatWait } from "../../../shared/ai/errors.ts";
-import type { SaveStudyEntry } from "../../types/study";
-import SaveEntryForm, { CopyButton } from "../Study/SaveEntryForm";
+import { CopyButton } from "../Study/SaveEntryForm";
+import AiResponse from "./AiResponse";
 
-function AiResult({ action, text, before, after, question, pageNumber, onSave, onRetry }: {
+function AiResult({ action, text, before, after, question, pageNumber, onRetry }: {
   action: AiAction; text: string; before: string; after: string; question: string;
-  pageNumber: number; onSave: SaveStudyEntry | null; onRetry: () => void;
+  pageNumber: number; onRetry: () => void;
 }) {
   const [model, setModel] = useState("Gemini");
   const [answer, setAnswer] = useState("");
@@ -53,9 +53,8 @@ function AiResult({ action, text, before, after, question, pageNumber, onSave, o
       : status === "streaming" ? "Đang nhận phản hồi…" : status === "stopped" ? "Đã dừng. Giữ lại phần đã nhận."
       : status === "ready" ? "Đã hoàn tất." : "Yêu cầu không hoàn tất."}</p>
     <small>{model}</small>
-    {answer && <div className="ai-answer" data-testid="ai-answer">{answer}</div>}
+    {answer && <AiResponse action={action} text={answer} pageNumber={pageNumber} />}
     {answer && <CopyButton text={answer} />}
-    {status === "ready" && <SaveEntryForm draft={{ pageNumber, selectedText: text, action, result: answer, question, model }} onSave={onSave} />}
     {error && <div className="ai-error" role="alert">
       <strong>{aiErrorTitle(error.code)}</strong>
       <p>{error.message}</p>
@@ -69,11 +68,9 @@ function AiResult({ action, text, before, after, question, pageNumber, onSave, o
   </div>;
 }
 
-export default function AiPanel({ selection, action, onClose, onSave }: {
-  selection: PdfSelection; action: AiAction; onClose: () => void; onSave: SaveStudyEntry | null;
+export default function AiPanel({ selection, action, onClose }: {
+  selection: PdfSelection; action: Exclude<AiAction, 'ask'>; onClose: () => void;
 }) {
-  const [question, setQuestion] = useState("");
-  const [submitted, setSubmitted] = useState("");
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     try { sessionStorage.removeItem("ai-access-token"); } catch { /* Storage may be disabled. */ }
@@ -84,21 +81,8 @@ export default function AiPanel({ selection, action, onClose, onSave }: {
       <button onClick={onClose} aria-label="Đóng panel AI">Đóng</button>
     </div>
     <small>Gemini · Đoạn chọn, ngữ cảnh lân cận và câu hỏi sẽ được gửi qua backend tới Google khi chạy tác vụ AI.</small>
-    <blockquote data-testid="ai-selected-text">{selection.cleanedText}</blockquote>
-    {action === "ask" && <form onSubmit={(event) => {
-      event.preventDefault();
-      if (question.trim()) { setSubmitted(question.trim()); setAttempt((n) => n + 1); }
-    }}>
-      <label htmlFor="ai-question">Câu hỏi về đoạn đã chọn</label>
-      <div className="ai-question-row">
-        <input id="ai-question" value={question} maxLength={2000} onChange={(event) => setQuestion(event.target.value)} placeholder="Bạn muốn tìm hiểu điều gì?" />
-        <button disabled={!question.trim()}>Gửi</button>
-      </div>
-    </form>}
-    {(action !== "ask" || submitted) && <>
       <AiResult key={attempt} action={action} text={selection.cleanedText}
-        before={selection.context.before} after={selection.context.after} question={submitted}
-        pageNumber={selection.pageNumber} onSave={onSave} onRetry={() => setAttempt((n) => n + 1)} />
-    </>}
+        before={selection.context.before} after={selection.context.after} question=""
+        pageNumber={selection.pageNumber} onRetry={() => setAttempt((n) => n + 1)} />
   </section>;
 }

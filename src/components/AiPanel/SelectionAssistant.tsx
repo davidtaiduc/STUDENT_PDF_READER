@@ -1,32 +1,59 @@
 import { useState } from "react";
 import type { PdfSelection } from "../../types/selection";
 import type { AiAction } from "../../types/ai";
-import SelectionToolbar from "../SelectionToolbar/SelectionToolbar";
 import AiPanel from "./AiPanel";
-import type { SaveStudyEntry } from "../../types/study";
-import SaveEntryForm, { CopyButton } from "../Study/SaveEntryForm";
+import { CopyButton } from "../Study/SaveEntryForm";
+import type { ChatArchive } from '../../services/storage/chatStore';
+import ChatPanel from './ChatPanel';
 
-export default function SelectionAssistant({ selection, onSave }: { selection: PdfSelection | null; onSave: SaveStudyEntry | null }) {
-  const [request, setRequest] = useState<{ selection: PdfSelection; action: AiAction } | null>(null);
+export default function SelectionAssistant({ selection, documentHash, aiSelection = null, onClearAiSelection, onConversationChange, showChat, onShowChat }: {
+  selection: PdfSelection | null; documentHash: string | null;
+  aiSelection?: PdfSelection | null; onClearAiSelection?: () => void;
+  onConversationChange?: (archives: ChatArchive[], error?: string) => void;
+  showChat: boolean; onShowChat: () => void;
+}) {
+  const [request, setRequest] = useState<{ id: number; selection: PdfSelection; action: Exclude<AiAction, 'ask'> } | null>(null);
   const [captured, setCaptured] = useState(selection);
-  if (selection && selection !== captured) setCaptured(selection);
-  if (selection && request && selection !== request.selection) {
-    setRequest({ ...request, selection });
+  const [removed, setRemoved] = useState<{ pdf: PdfSelection | null; ai: PdfSelection | null } | null>(null);
+  if (selection && selection !== captured) {
+    setCaptured(selection);
   }
-  // Keep the chosen excerpt when focus moves into the panel. A new PDF selection
-  // immediately replaces it; geometry-only updates do not restart the response.
-  const active = selection ?? captured;
+  // Selection is a draft; an AI request captures it only on an explicit click.
+  const candidate = aiSelection ?? selection ?? captured;
+  const active = candidate && (candidate === removed?.pdf || candidate === removed?.ai) ? null : candidate;
+  const selectionKey = active ? JSON.stringify([active.pageNumber, active.cleanedText, active.context, active.source]) : '';
+  const [previousSelectionKey, setPreviousSelectionKey] = useState(selectionKey);
+  if (selectionKey !== previousSelectionKey) {
+    setPreviousSelectionKey(selectionKey);
+    if (request) setRequest(null);
+  }
+  const clearSelection = () => {
+    setRemoved({ pdf: selection ?? captured, ai: aiSelection });
+    onClearAiSelection?.();
+    // Prevent selection observers from restoring the removed native highlight.
+    window.getSelection()?.removeAllRanges();
+  };
   return <div className="assistant-content" data-selection-controls>
-    <SelectionToolbar disabled={!active} activeAction={request?.action}
-      onAction={(action) => { if (active) setRequest({ selection: active, action }); }} />
-    {!request && <section className="selection-summary" aria-label="PDF selection" data-testid="pdf-selection">
+    {aiSelection && <div className="ai-selection-hint" role="status">
+      <span>Đã chọn từ kết quả AI · {aiSelection.cleanedText.length} ký tự</span>
+      <q>{aiSelection.cleanedText.slice(0, 160)}{aiSelection.cleanedText.length > 160 ? '…' : ''}</q>
+      <button onClick={onClearAiSelection}>Bỏ chọn đoạn AI</button>
+    </div>}
+    {(documentHash || active || showChat) && <div className="assistant-view" hidden={!showChat}>
+      <ChatPanel key={documentHash ?? 'temporary-chat'} documentHash={documentHash} selection={active} onClearSelection={clearSelection} onConversationChange={onConversationChange} />
+    </div>}
+    <div className="assistant-view excerpt-task-view" hidden={showChat}>
+    <section className="selection-summary" aria-label="PDF selection" data-testid="pdf-selection">
       {active ? <>
         <strong>Đoạn đã chọn · Trang {active.pageNumber}</strong>
         <small>{active.cleanedText.length} ký tự</small>
-        <p className="selection-text" data-testid="selected-text">{active.cleanedText}</p>
+        <div data-testid="ai-selected-text"><p className="selection-text" data-testid="selected-text">{active.cleanedText}</p></div>
+        <div className="excerpt-actions" role="group" aria-label="Xử lý đoạn đã chọn">
+          <button onClick={() => setRequest(previous => ({ id: (previous?.id ?? 0) + 1, selection: active, action: 'translate' }))}>Dịch</button>
+          <button onClick={() => setRequest(previous => ({ id: (previous?.id ?? 0) + 1, selection: active, action: 'explain' }))}>Giải thích</button>
+          <button onClick={onShowChat}>Hỏi AI</button>
+        </div>
         <CopyButton text={active.cleanedText} />
-        <SaveEntryForm key={JSON.stringify([active.pageNumber, active.rawText, active.context])}
-          draft={{ pageNumber: active.pageNumber, selectedText: active.cleanedText, action: "note", result: "" }} onSave={onSave} />
         <details>
           <summary>Ngữ cảnh và văn bản gốc</summary>
           <p><strong>Trước: </strong>{active.context.before || "Đầu trang / cột"}</p>
@@ -37,9 +64,12 @@ export default function SelectionAssistant({ selection, onSave }: { selection: P
         <span className="assistant-empty-icon" aria-hidden="true">Aa</span>
         <h2>Đọc và hiểu, cùng một chỗ</h2>
         <p>Mở PDF, bôi đen một đoạn rồi chọn Dịch, Giải thích hoặc Hỏi AI. Kết quả sẽ hiển thị tại đây.</p>
+        {documentHash && <button onClick={onShowChat}>Mở Hỏi AI</button>}
       </div>}
-    </section>}
-    {request && active && <AiPanel key={JSON.stringify([active.pageNumber, active.rawText, active.context, request.action])}
-      selection={active} action={request.action} onSave={onSave} onClose={() => setRequest(null)} />}
+    </section>
+    {request && <div className="excerpt-result">
+      <AiPanel key={request.id} selection={request.selection} action={request.action} onClose={() => setRequest(null)} />
+    </div>}
+    </div>
   </div>;
 }

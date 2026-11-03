@@ -2,15 +2,17 @@ import type { AiAction } from '../../types/ai.ts';
 import type { AiExcerpt } from '../../../shared/types/ai.ts';
 import { readSse } from '../../../shared/ai/sse.ts';
 import { errorFromPayload } from '../../../shared/ai/errors.ts';
+import type { ChatContextTurn } from '../../../shared/ai/chat.ts';
 
 export async function streamGemini(options: { action: AiAction; excerpt: AiExcerpt; question: string;
-  baseUrl?: string; signal: AbortSignal; onText: (text: string) => void; onModel: (model: string) => void }) {
+  history?: ChatContextTurn[]; baseUrl?: string; signal: AbortSignal; onText: (text: string) => void; onModel: (model: string) => void }) {
   const signal = AbortSignal.any([options.signal, AbortSignal.timeout(185000)]);
   try {
     const response = await fetch(`${(options.baseUrl || '').replace(/\/$/, '')}/api/ai`, {
       method: 'POST', signal, headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: options.action, selectedText: options.excerpt.cleanedText,
-        before: options.excerpt.context.before.slice(-650), after: options.excerpt.context.after.slice(0, 650), question: options.question }),
+        before: options.excerpt.context.before.slice(-650), after: options.excerpt.context.after.slice(0, 650), question: options.question,
+        ...(options.action === 'ask' && options.history?.length ? { history: options.history } : {}) }),
     });
     if (!response.ok) {
       const payload = await response.json().catch(() => null);

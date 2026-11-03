@@ -18,7 +18,8 @@ backend/
   tsconfig.json           Kiểm tra kiểu backend
 ```
 
-- Phát triển: `npm run dev:backend` (`npm run server` vẫn dùng được).
+- Chạy toàn ứng dụng: `npm run dev` tại gốc, frontend + backend chung terminal; Ctrl+C dừng cả hai.
+- Chạy backend riêng: `npm run dev:backend` (`npm run server` vẫn dùng được).
 - Production: `npm run server:production`.
 - Kiểm tra kết nối: `npm run check:backend`.
 - Kiểm tra kiểu: `npx tsc -p backend/tsconfig.json`.

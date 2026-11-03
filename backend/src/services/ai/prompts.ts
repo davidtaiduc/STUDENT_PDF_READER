@@ -1,4 +1,5 @@
 import type { AiAction, AiExcerpt } from "../../../../shared/types/ai.ts";
+import type { ChatContextTurn } from '../../../../shared/ai/chat.ts';
 
 const instructions: Record<AiAction, string> = {
   translate: "Dịch chính xác CHỈ trường selectedText sang tiếng Việt. Nếu đã là tiếng Việt, giữ nguyên. Chỉ trả bản dịch, không thêm lời dẫn hay dịch ngữ cảnh. Nếu đoạn bị cắt giữa câu hoặc từ, không tự hoàn thành câu bằng nội dung từ contextBefore/contextAfter.",
@@ -6,7 +7,7 @@ const instructions: Record<AiAction, string> = {
   ask: "Trả lời câu hỏi bằng tiếng Việt dựa trên đoạn được chọn. Nếu đoạn và ngữ cảnh không đủ để trả lời, nói rõ điều đó; không bịa dữ kiện.",
 };
 
-export function buildMessages(action: AiAction, excerpt: AiExcerpt, question = "") {
+export function buildMessages(action: AiAction, excerpt: AiExcerpt, question = "", history: ChatContextTurn[] = []) {
   if (!excerpt.cleanedText.trim()) throw new Error("Hãy chọn đoạn văn bản trong PDF trước.");
   if (excerpt.cleanedText.length > 12000) throw new Error("Đoạn chọn quá dài. Hãy chọn tối đa 12.000 ký tự rồi thử lại.");
   if (action === "ask" && !question.trim()) throw new Error("Hãy nhập câu hỏi về đoạn đã chọn.");
@@ -17,7 +18,7 @@ export function buildMessages(action: AiAction, excerpt: AiExcerpt, question = "
       selectedText: excerpt.cleanedText,
       contextBefore: excerpt.context.before.slice(-650),
       contextAfter: excerpt.context.after.slice(0, 650),
-      ...(action === "ask" ? { question: question.trim() } : {}),
+      ...(action === "ask" ? { question: question.trim(), ...(history.length ? { conversationHistory: history } : {}) } : {}),
     }) },
   ];
 }

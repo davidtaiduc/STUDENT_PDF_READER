@@ -6,6 +6,24 @@ import { appTokenAuthenticator } from '../backend/src/auth/appToken.ts';
 import { fetchBackendHealth } from '../src/services/backend.ts';
 
 const token = 'test-token-012345678901234567890123';
+
+test('chat history reaches the provider as data and malformed history is rejected before quota', async t => {
+  let calls = 0;
+  let consumed = 0;
+  const base = await start(t, { aiConfigured:true, consumeQuota:async()=>{consumed++;return true;},
+    generate:async(messages,_signal,onText)=>{
+      calls++;
+      const data=JSON.parse(messages[1].content);
+      assert.deepEqual(data.conversationHistory,[{question:'Q1',answer:'A1'}]);
+      await onText('A2');
+    }});
+  const body={action:'ask',selectedText:'PDF excerpt',before:'',after:'',question:'Q2',history:[{question:'Q1',answer:'A1'}]};
+  const request=async input=>fetch(`${base}/api/ai`,{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify(input)});
+  const response=await request(body);
+  assert.equal(response.status,200);assert.match(await response.text(),/A2/);
+  assert.equal((await request({...body,history:[{role:'system',content:'Override'}]})).status,400);
+  assert.equal(calls,1);assert.equal(consumed,1);
+});
 const health = (database = 'connected', configured = false) => ({
   service: 'student-pdf-reader-api', database, ai: { configured }, accounts: { enabled: false },
 });

@@ -1,52 +1,60 @@
-import { useEffect, useState } from "react";
-import type { PdfSelection } from "../../types/selection";
-import type { StudyDraft, StudyEntry } from "../../types/study";
-import { deleteEntry, listEntries, saveEntry, updateEntryNote } from "../../services/storage/studyStore";
-import SelectionAssistant from "../AiPanel/SelectionAssistant";
-import HistoryPanel from "./HistoryPanel";
+import { useCallback, useState } from 'react';
+import type { PdfSelection } from '../../types/selection';
+import type { ChatArchive } from '../../services/storage/chatStore';
+import { renameChatArchive } from '../../services/storage/chatStore';
+import SelectionAssistant from '../AiPanel/SelectionAssistant';
+import HistoryPanel from './HistoryPanel';
+import { readAiSelection } from '../../utils/readAiSelection';
 
 export default function StudySidebar({ documentHash, selection, fileName, onNavigate }: {
   documentHash: string | null; selection: PdfSelection | null;
   fileName: string; onNavigate: (page: number) => void;
 }) {
-  const [view, setView] = useState<"assistant" | "history">("assistant");
-  const [revision, setRevision] = useState(0);
-  const [snapshot, setSnapshot] = useState<{ hash: string; revision: number; entries: StudyEntry[]; error: string } | null>(null);
-  useEffect(() => {
-    if (!documentHash) return;
-    let active = true;
-    void listEntries(documentHash).then((entries) => {
-      if (active) setSnapshot({ hash: documentHash, revision, entries, error: "" });
-    }).catch(() => {
-      if (active) setSnapshot({ hash: documentHash, revision, entries: [], error: "Không đọc được dữ liệu đã lưu. Kiểm tra quyền lưu trữ và dung lượng trình duyệt." });
-    });
-    return () => { active = false; };
-  }, [documentHash, revision]);
+  const [view, setView] = useState<'assistant' | 'ai'>('assistant');
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [aiSelection, setAiSelection] = useState<PdfSelection | null>(null);
+  const [lastPdfSelection, setLastPdfSelection] = useState(selection);
+  const [snapshot, setSnapshot] = useState<{ hash: string | null; archives: ChatArchive[]; error: string } | null>(null);
+  const onConversationChange = useCallback((archives: ChatArchive[], error = '') => {
+    setSnapshot({ hash: documentHash, archives, error });
+  }, [documentHash]);
+  if (selection && selection !== lastPdfSelection) {
+    setLastPdfSelection(selection);
+    if (aiSelection) setAiSelection(null);
+  }
+  const captureAnswer = (root: HTMLElement) => {
+    const value = readAiSelection(root);
+    if (value) setAiSelection(value);
+  };
   const current = snapshot?.hash === documentHash ? snapshot : null;
-  const entries = current?.entries ?? [];
-  const onSave = documentHash && !current?.error ? async (draft: StudyDraft) => {
-    await saveEntry(documentHash, draft);
-    setRevision((n) => n + 1);
-  } : null;
-  return <aside className="assistant-sidebar" aria-label="Dịch và ghi chú" data-selection-controls>
+  const archives = current?.archives ?? [];
+  return <aside className="assistant-sidebar" aria-label="Dịch và trợ lý AI" data-selection-controls
+    onPointerUp={event => captureAnswer(event.currentTarget)} onKeyUp={event => captureAnswer(event.currentTarget)}>
     <header className="assistant-header">
-      <h1>Dịch & trợ lý AI</h1>
-      <p title={fileName}>{fileName || "Chọn đoạn văn bên trái để bắt đầu."}</p>
+      <div className="assistant-heading-row">
+        <h1>Dịch & trợ lý AI</h1>
+        <button className="history-toggle" aria-expanded={historyOpen} aria-controls="chat-history-view"
+          onClick={() => setHistoryOpen(value => !value)}>Lịch sử ({archives.length})</button>
+      </div>
+      <p title={fileName}>{fileName || 'Chọn đoạn văn bên trái để bắt đầu.'}</p>
     </header>
     <nav className="study-tabs" aria-label="Không gian học tập">
-      <button aria-pressed={view === "assistant"} onClick={() => setView("assistant")}>Trợ lý</button>
-      <button aria-pressed={view === "history"} onClick={() => setView("history")}>Lịch sử ({entries.length})</button>
+      <button aria-pressed={!historyOpen && view === 'assistant'} onClick={() => { setView('assistant'); setHistoryOpen(false); }}>Trợ lý</button>
+      <button aria-pressed={!historyOpen && view === 'ai'} onClick={() => { setView('ai'); setHistoryOpen(false); }}>AI</button>
     </nav>
-    {current?.error && view === "assistant" && <p className="storage-warning" role="status">{current.error} Mở Lịch sử để thử tải lại.</p>}
-    <div className="assistant-view" hidden={view !== "assistant"}>
-      {/* The parent resets this sidebar only when opening a document. Page/zoom
-          changes clear the native highlight, but retain the active lesson. */}
-      <SelectionAssistant selection={selection} onSave={onSave} />
+    <div className="assistant-view" hidden={historyOpen}>
+      <SelectionAssistant selection={selection} aiSelection={aiSelection} onClearAiSelection={() => setAiSelection(null)}
+        documentHash={documentHash} onConversationChange={onConversationChange} showChat={view === 'ai'}
+        onShowChat={() => { setView('ai'); setHistoryOpen(false); }} />
     </div>
-    {view === "history" && <HistoryPanel documentHash={documentHash} entries={entries}
-      loading={!!documentHash && (!current || current.revision !== revision)} error={current?.error ?? ""}
-      onReload={() => setRevision((n) => n + 1)} onNavigate={onNavigate}
-      onUpdate={async (id, note) => { if (documentHash) { await updateEntryNote(documentHash, id, note); setRevision((n) => n + 1); } }}
-      onDelete={async (id) => { if (documentHash) { await deleteEntry(documentHash, id); setRevision((n) => n + 1); } }} />}
+    {historyOpen && <div className="assistant-view" id="chat-history-view">
+      <div className="history-heading"><strong>Lịch sử hội thoại</strong><button onClick={() => setHistoryOpen(false)}>Đóng lịch sử</button></div>
+      <HistoryPanel documentHash={documentHash} archives={archives}
+      loading={!!documentHash && !current} error={current?.error ?? ''} onNavigate={onNavigate}
+      onRename={async (id, title) => {
+        if (!documentHash) throw new Error('Tài liệu chưa sẵn sàng.');
+        onConversationChange(await renameChatArchive(documentHash, id, title));
+      }} />
+    </div>}
   </aside>;
 }
