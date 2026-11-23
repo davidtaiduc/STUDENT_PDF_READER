@@ -20,7 +20,7 @@ export function geminiFailure(status: number, payload: unknown, retryAfter: stri
   const daily = code === 'quota_exceeded' || details.some(detail => detail && typeof detail === 'object'
     && detail['@type'] === 'type.googleapis.com/google.rpc.QuotaFailure' && Array.isArray(detail.violations)
     && detail.violations.some((item: { quotaId?: unknown; quotaMetric?: unknown }) => /perday|per_day|daily/i.test(`${item?.quotaId || ''} ${item?.quotaMetric || ''}`)));
-  if (daily) return new AiRequestError('Hạn mức Gemini trong ngày đã hết. Bạn vẫn có thể đọc PDF và lưu ghi chú; hãy quay lại khi hạn mức được làm mới.', 'provider_quota', false);
+  if (daily) return new AiRequestError('Hạn mức Gemini trong ngày đã hết. Bạn vẫn có thể đọc PDF; hãy quay lại khi hạn mức được làm mới.', 'provider_quota', false);
   if (status === 402 || code === 'payment_required') return new AiRequestError('Dịch vụ AI đã hết số dư. Vui lòng liên hệ người quản lý ứng dụng.', 'payment', false);
   if (status === 401 || status === 403) return new AiRequestError('Dịch vụ AI chưa được cấu hình đúng. Vui lòng liên hệ người quản lý ứng dụng.', 'configuration', false);
   if (status === 400 || status === 404) return new AiRequestError('Dịch vụ AI chưa xử lý được yêu cầu này. Vui lòng báo người quản lý ứng dụng để kiểm tra cấu hình.', 'configuration', false);
@@ -30,6 +30,7 @@ export function geminiFailure(status: number, payload: unknown, retryAfter: stri
       : 'Google Gemini đang giới hạn yêu cầu này. Chưa có thông tin xác nhận đã hết hạn mức trong ngày; hãy chờ một lúc rồi thử lại.',
     knownRate ? 'provider_rate_limit' : 'provider_limit', true, Math.max(5, delay));
   }
+  if(code==='service_unavailable')return new AiRequestError('Dịch vụ Gemini tạm thời không sẵn sàng. Hãy chờ một chút rồi thử lại.','provider_unavailable',true,Math.max(5,delay));
   return new AiRequestError('Dịch vụ Gemini tạm thời chưa phản hồi. Hãy chờ rồi thử lại.', 'provider_unavailable', true, Math.max(5, delay));
 }
 

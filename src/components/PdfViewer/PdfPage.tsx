@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { PDFDocumentProxy, RenderTask } from "pdfjs-dist";
+import type { PDFDocumentProxy, PDFPageProxy, RenderTask } from "pdfjs-dist";
 import { TextLayerBuilder } from "pdfjs-dist/web/pdf_viewer.mjs";
 
 interface PdfPageProps {
@@ -21,6 +21,7 @@ export default function PdfPage({ pdf, pageNumber, scale }: PdfPageProps) {
     textDiv.className = "textLayer";
     wrap.replaceChildren(canvas, textDiv);
     let cancelled = false;
+    let ownedPage:PDFPageProxy|null=null;
     let renderTask: RenderTask | null = null;
     let textLayer: TextLayerBuilder | null = null;
     const selectionController = new AbortController();
@@ -28,9 +29,10 @@ export default function PdfPage({ pdf, pageNumber, scale }: PdfPageProps) {
     async function renderPage() {
       try {
         const page = await pdf.getPage(pageNumber);
+        ownedPage=page;
         if (cancelled || !wrap) return;
         const viewport = page.getViewport({ scale });
-        const dpr = window.devicePixelRatio || 1;
+        const dpr = Math.min(window.devicePixelRatio || 1,Math.sqrt(16_000_000/(viewport.width*viewport.height)),8192/viewport.width,8192/viewport.height);
         wrap.style.width = `${viewport.width}px`;
         wrap.style.height = `${viewport.height}px`;
         wrap.style.setProperty("--scale-factor", String(scale));
@@ -66,6 +68,7 @@ export default function PdfPage({ pdf, pageNumber, scale }: PdfPageProps) {
       selectionController.abort();
       renderTask?.cancel();
       textLayer?.cancel();
+      void (renderTask?.promise??Promise.resolve()).catch(()=>{}).then(()=>{canvas.width=0;canvas.height=0;ownedPage?.cleanup();});
       canvas.remove();
       textLayer?.div.remove();
       textDiv.remove();

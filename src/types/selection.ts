@@ -1,4 +1,6 @@
+import type { ContextScope } from '../../shared/ai/contextScope.ts';
 export interface PdfSelection {
+  scope?: ContextScope;
   /** Missing on existing PDF selections; AI answers retain their source page. */
   source?: 'pdf' | 'ai';
   /** Display text with displaced wide blocks restored to visual position. */

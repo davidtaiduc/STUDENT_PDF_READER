@@ -66,3 +66,6 @@ test-pdfs/
 # =========================
 SESSION_HANDOFF.md
 release/
+
+# Generated OCR assets are copied from installed packages at build time.
+public/ocr/

@@ -13,14 +13,3 @@ export async function consumeCounter(collection: Collection<UsageCounter>, key: 
     throw error;
   }
 }
-
-export function mongoQuota(collection: Collection<UsageCounter>, daily: number, minute: number) {
-  return async () => {
-    const now = Date.now();
-    const day = Math.floor(now / 86400000);
-    const min = Math.floor(now / 60000);
-    // Global limits survive restarts and apply across backend instances.
-    if (!await consumeCounter(collection, `minute:${min}`, minute, new Date((min + 2) * 60000))) return false;
-    return consumeCounter(collection, `day:${day}`, daily, new Date((day + 2) * 86400000));
-  };
-}

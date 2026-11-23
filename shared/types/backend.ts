@@ -3,5 +3,5 @@ export interface BackendHealth {
   service: 'student-pdf-reader-api';
   database: 'connected' | 'unavailable';
   ai: { configured: boolean };
-  accounts: { enabled: false };
+  accounts: { enabled: boolean };
 }

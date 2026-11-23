@@ -1,0 +1,39 @@
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import type { AccountUser } from '../../../shared/types/account';
+import { authRequest } from '../../services/auth';
+import { AuthContext } from './context';
+export default function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<AccountUser | null>(null);
+  const [status, setStatus] = useState<'checking' | 'ready' | 'unavailable'>('checking');
+  const [error, setError] = useState('');
+  const version = useRef(0);
+  const channel = useRef<BroadcastChannel | null>(null);
+  const refresh = useCallback(async (block = true) => {
+    if (block) setStatus('checking');
+    const id = ++version.current;
+    try { const result = await authRequest('me'); if (id === version.current) { setUser(result.user); setStatus('ready'); setError(''); } }
+    catch { if (id === version.current) { setStatus('unavailable'); setError('Chưa kiểm tra được phiên đăng nhập.'); } }
+  }, []);
+  useEffect(() => {
+    let cancelled = false;
+    const id = version.current;
+    void authRequest('me').then(result => {
+      if (!cancelled && id === version.current) { setUser(result.user); setStatus('ready'); setError(''); }
+    }).catch(() => { if (!cancelled && id === version.current) { setStatus('unavailable'); setError('Chưa kiểm tra được phiên đăng nhập.'); } });
+    return () => { cancelled = true; };
+  }, []);
+  useEffect(() => {
+    const check = () => { if (document.visibilityState === 'visible') void refresh(); };
+    window.addEventListener('auth-invalid', check); window.addEventListener('focus', check); document.addEventListener('visibilitychange', check);
+    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') void refresh(false); }, 60000);
+    if (typeof BroadcastChannel !== 'undefined') { channel.current = new BroadcastChannel('studypdf-auth'); channel.current.onmessage = () => void refresh(); }
+    return () => { window.removeEventListener('auth-invalid', check); window.removeEventListener('focus', check); document.removeEventListener('visibilitychange', check); clearInterval(timer); channel.current?.close(); channel.current = null; };
+  }, [refresh]);
+  const setAccount = useCallback((account: AccountUser | null) => { ++version.current; setUser(current => account === null || current?.id === account.id ? account : current); setStatus('ready'); setError(''); if (!account) channel.current?.postMessage('session-changed'); }, []);
+  const submit = async (action: 'login' | 'register' | 'logout', input?: object) => {
+    const id = ++version.current;
+    const result = await authRequest(action, input);
+    if (id === version.current) { setUser(result.user); setStatus('ready'); setError(''); channel.current?.postMessage('session-changed'); }
+  };
+  return <AuthContext.Provider value={{ user, status, error, refresh, submit, setAccount }}>{children}</AuthContext.Provider>;
+}

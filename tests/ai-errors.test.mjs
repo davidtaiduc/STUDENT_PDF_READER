@@ -42,12 +42,12 @@ test('provider error JSON is bounded and malformed responses have a neutral fall
 test('HTTP backend and browser preserve structured streamed errors and cooldown', async t => {
   const token='test-token-012345678901234567890123';
   const failure=new AiRequestError('Gemini cần chờ trước khi thử lại.','provider_rate_limit',true,12);
-  const server=createApi({authenticate:appTokenAuthenticator(token),origins:[],model:'test',aiConfigured:true,maxConcurrent:3,
+  const server=createApi({authenticateUser:async()=>({kind:'user',id:'aaaaaaaaaaaaaaaaaaaaaaaa'}),authenticate:appTokenAuthenticator(token),origins:['http://allowed.test'],model:'test',aiConfigured:true,maxConcurrent:3,
     getHealth:async()=>({service:'student-pdf-reader-api',database:'connected',ai:{configured:true},accounts:{enabled:false}}),
     consumeQuota:async()=>true,generate:async()=>{throw failure;}});
   server.listen(0,'127.0.0.1');await once(server,'listening');t.after(()=>{server.closeAllConnections();server.close();});
   const originalFetch=globalThis.fetch;
-  t.mock.method(globalThis,'fetch',(url,init)=>originalFetch(url,{...init,headers:{...init.headers,Authorization:`Bearer ${token}`}}));
+  t.mock.method(globalThis,'fetch',(url,init)=>originalFetch(url,{...init,headers:{...init.headers,Origin:'http://allowed.test',Authorization:`Bearer ${token}`}}));
   await assert.rejects(streamGemini({baseUrl:`http://127.0.0.1:${server.address().port}`,action:'translate',excerpt:{cleanedText:'Hello',context:{before:'',after:''}},question:'',signal:new AbortController().signal,onText:()=>{},onModel:()=>{}}),
     error=>error instanceof AiRequestError&&error.code==='provider_rate_limit'&&error.retryAfterSeconds===12);
 });

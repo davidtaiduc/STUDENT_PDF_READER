@@ -18,7 +18,7 @@ test('chat history reaches the provider as data and malformed history is rejecte
       await onText('A2');
     }});
   const body={action:'ask',selectedText:'PDF excerpt',before:'',after:'',question:'Q2',history:[{question:'Q1',answer:'A1'}]};
-  const request=async input=>fetch(`${base}/api/ai`,{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify(input)});
+  const request=async input=>fetch(`${base}/api/ai`,{method:'POST',headers:{Origin:'http://allowed.test',Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify(input)});
   const response=await request(body);
   assert.equal(response.status,200);assert.match(await response.text(),/A2/);
   assert.equal((await request({...body,history:[{role:'system',content:'Override'}]})).status,400);
@@ -28,7 +28,7 @@ const health = (database = 'connected', configured = false) => ({
   service: 'student-pdf-reader-api', database, ai: { configured }, accounts: { enabled: false },
 });
 async function start(t, overrides = {}) {
-  const server = createApi({ authenticate: appTokenAuthenticator(token), origins: ['http://allowed.test'],
+  const server = createApi({ authenticateUser:async()=>({kind:'user',id:'aaaaaaaaaaaaaaaaaaaaaaaa'}), authenticate: appTokenAuthenticator(token), origins: ['http://allowed.test'],
     model: 'test', aiConfigured: false, maxConcurrent: 1, getHealth: async () => health(),
     consumeQuota: async () => { assert.fail('Health or access check must not consume Gemini quota'); },
     generate: async () => { assert.fail('Health or access check must not call Gemini'); }, ...overrides });
@@ -43,7 +43,7 @@ test('backend and database remain usable without a configured Gemini key', async
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('cache-control'), 'no-store');
   assert.deepEqual(await response.json(), health());
-  const ai = await fetch(`${base}/api/ai`, { method:'POST', headers: { Authorization:`Bearer ${token}`, 'Content-Type':'application/json' }, body:'{}' });
+  const ai = await fetch(`${base}/api/ai`, { method:'POST', headers: { Origin:'http://allowed.test', Authorization:`Bearer ${token}`, 'Content-Type':'application/json' }, body:'{}' });
   assert.equal(ai.status, 503);
   assert.match((await ai.json()).error, /cấu hình Gemini/);
 });
@@ -54,11 +54,11 @@ test('database outage produces 503 and is shown honestly by the frontend client'
   assert.equal((await fetchBackendHealth(base, new AbortController().signal)).database, 'unavailable');
 });
 
-test('access check uses app credentials and never impersonates a user account', async t => {
+test('access check requires internal credentials and an authenticated user', async t => {
   const base = await start(t);
   assert.equal((await fetch(`${base}/api/access`)).status, 401);
-  const response = await fetch(`${base}/api/access`, { headers: { Authorization:`Bearer ${token}` } });
-  assert.deepEqual(await response.json(), { authenticated: true, authentication:'app', accountsEnabled:false });
+  const response = await fetch(`${base}/api/access`, { headers: { Origin:'http://allowed.test', Authorization:`Bearer ${token}` } });
+  assert.deepEqual(await response.json(), { authenticated: true, authentication:'user', accountsEnabled:true });
   assert.equal((await fetch(`${base}/api/health`, {headers:{Origin:'http://evil.test'}})).status,403);
 });
 

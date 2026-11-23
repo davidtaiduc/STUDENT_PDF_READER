@@ -8,6 +8,8 @@
   },
   "scripts": {
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "test:integration": "node --experimental-strip-types --test tests/integration/*.test.mjs",
+    "benchmark:auth": "node --experimental-strip-types scripts/benchmark-argon2.mjs",
     "dev": "concurrently --kill-others --names backend,frontend \"npm run dev:backend\" \"npm run dev:frontend -- --host 127.0.0.1 --port 5173 --strictPort\"",
     "build": "tsc -b && tsc -p backend/tsconfig.json && vite build",
     "build:static": "node --env-file-if-exists=.env scripts/build-static.mjs",
@@ -22,12 +24,15 @@
     "server:production": "node --env-file-if-exists=.env --experimental-strip-types backend/src/index.ts",
     "predev:frontend": "node scripts/sync-pdfjs-assets.mjs",
     "dev:frontend": "vite",
-    "dev:backend": "node --env-file-if-exists=.env --experimental-strip-types backend/src/index.ts --development"
+    "dev:backend": "node --env-file-if-exists=.env --experimental-strip-types --watch backend/src/index.ts --development"
   },
   "overrides": {
     "katex": "$katex"
   },
   "dependencies": {
+    "@tesseract.js-data/eng": "^1.0.0",
+    "@tesseract.js-data/vie": "^1.0.0",
+    "argon2": "^0.45.2",
     "katex": "^0.19.1",
     "lucide-react": "^1.63.0",
     "mongodb": "^7.8.0",
@@ -37,7 +42,8 @@
     "react-markdown": "^10.1.0",
     "rehype-katex": "^7.0.1",
     "remark-gfm": "^4.0.1",
-    "remark-math": "^6.0.0"
+    "remark-math": "^6.0.0",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -49,7 +55,7 @@
     "eslint": "^10.13.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
-    "fake-indexeddb": "^6.2.7",
+    "fake-indexeddb": "^6.2.8",
     "globals": "^17.13.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.72.0",

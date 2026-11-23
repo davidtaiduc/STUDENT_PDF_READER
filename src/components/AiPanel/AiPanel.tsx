@@ -4,7 +4,7 @@ import type { AiAction } from "../../types/ai";
 import type { PdfSelection } from "../../types/selection";
 import { streamGemini } from "../../services/ai/gemini";
 import { AiRequestError, aiErrorTitle, formatWait } from "../../../shared/ai/errors.ts";
-import { CopyButton } from "../Study/SaveEntryForm";
+import { CopyButton } from "./CopyButton";
 import AiResponse from "./AiResponse";
 
 function AiResult({ action, text, before, after, question, pageNumber, onRetry }: {
@@ -22,12 +22,16 @@ function AiResult({ action, text, before, after, question, pageNumber, onRetry }
     const controller = new AbortController();
     controllerRef.current = controller;
     let active = true;
-    void streamGemini({ action, excerpt: { cleanedText: text, context: { before, after } }, question,
+    void Promise.resolve().then(() => {
+      // StrictMode disposes the first effect before this task; do not send a paid request for it.
+      if (!active || controller.signal.aborted) return;
+      return streamGemini({ action, excerpt: { cleanedText: text, context: { before, after } }, question,
       baseUrl: import.meta.env.VITE_AI_API_URL || "", signal: controller.signal, onModel: setModel,
       onText: (part) => {
         if (!active || controller.signal.aborted) return;
         setAnswer((value) => value + part); setStatus("streaming");
       },
+      });
     }).then(() => { if (active && !controller.signal.aborted) setStatus("ready"); })
       .catch((err: unknown) => {
         if (!active || controller.signal.aborted) return;
@@ -60,7 +64,7 @@ function AiResult({ action, text, before, after, question, pageNumber, onRetry }
       <p>{error.message}</p>
       {answer && <p>Phần phản hồi phía trên chưa hoàn tất. Bạn có thể sao chép phần đã nhận.</p>}
     </div>}
-    {remaining > 0 && <p className="ai-wait-hint">Bạn có thể tiếp tục đọc PDF và ghi chú trong lúc chờ.</p>}
+    {remaining > 0 && <p className="ai-wait-hint">Bạn có thể tiếp tục đọc PDF trong lúc chờ.</p>}
     {busy && <button onClick={() => { controllerRef.current?.abort(); setStatus("stopped"); }}>Dừng</button>}
     {(!error || error.retryable) && <button disabled={busy || remaining > 0} onClick={() => {
       if (!busy && Date.now() >= retryAt) onRetry();

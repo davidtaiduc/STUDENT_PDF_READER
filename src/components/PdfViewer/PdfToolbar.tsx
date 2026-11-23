@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 
 interface PdfToolbarProps {
+  compact?:boolean;
   currentPage: number;
   totalPages: number;
   scale: number;
@@ -13,11 +14,19 @@ interface PdfToolbarProps {
   onFitWidth: () => void;
 }
 
-function PageNumber({ currentPage, totalPages, onPageChange }: {
+function PageNumber({ currentPage, totalPages, onPageChange,compact }: {
+  compact?:boolean;
   currentPage: number; totalPages: number; onPageChange: (page: number) => void;
 }) {
   const [value, setValue] = useState(String(totalPages ? currentPage : 0));
   const [error, setError] = useState("");
+  const [pageSnapshot, setPageSnapshot] = useState(`${currentPage}-${totalPages}`);
+  // Synchronize navigation without replacing the focused input DOM node.
+  if (pageSnapshot !== `${currentPage}-${totalPages}`) {
+    setPageSnapshot(`${currentPage}-${totalPages}`);
+    setValue(String(totalPages ? currentPage : 0));
+    setError("");
+  }
   const commit = (restoreInvalid: boolean) => {
     const page = /^\d+$/.test(value.trim()) ? Number(value.trim()) : NaN;
     if (!Number.isSafeInteger(page) || page < 1 || page > totalPages) {
@@ -30,10 +39,11 @@ function PageNumber({ currentPage, totalPages, onPageChange }: {
   };
   return <span className="page-number-control">
     <span className="toolbar-text page-indicator">
-      <label>Trang <input aria-label="Số trang" type="text" inputMode="numeric" maxLength={10}
+      <label>{compact?null:"Trang "}<input aria-label="Số trang" type="text" inputMode="numeric" maxLength={10}
         value={value} disabled={!totalPages} aria-invalid={!!error} aria-describedby={error ? 'page-number-error' : undefined}
         title="Nhập số trang rồi nhấn Enter" style={{ width: `${Math.max(2, String(totalPages).length, value.length)}ch` }}
         onFocus={event => event.currentTarget.select()}
+        onClick={event => event.currentTarget.select()}
         onChange={event => { setValue(event.target.value); setError(""); }}
         onBlur={() => { if (totalPages) commit(true); }}
         onKeyDown={event => {
@@ -47,6 +57,7 @@ function PageNumber({ currentPage, totalPages, onPageChange }: {
 }
 
 export default function PdfToolbar({
+  compact=false,
   currentPage,
   totalPages,
   scale,
@@ -62,8 +73,8 @@ export default function PdfToolbar({
   const hasPdf = totalPages > 0;
 
   return (
-    <div className="toolbar" role="toolbar" aria-label="Điều khiển PDF">
-      <button onClick={() => inputRef.current?.click()}>Mở PDF</button>
+    <div className={compact?"toolbar toolbar-floating":"toolbar"} role="toolbar" aria-label="Điều khiển PDF" data-selection-controls>
+      {!compact&&<button onClick={() => inputRef.current?.click()}>Mở PDF</button>}
       <input
         ref={inputRef}
         type="file"
@@ -76,17 +87,20 @@ export default function PdfToolbar({
         }}
       />
 
-      <span className="toolbar-sep" />
+      <span className="toolbar-sep" aria-hidden="true" />
+      <div className="toolbar-group" role="group" aria-label="Chuyển trang">
 
       <button aria-label="Trang trước" onClick={onPrev} disabled={!hasPdf || currentPage <= 1}>
         ←
       </button>
-      <PageNumber key={`${currentPage}-${totalPages}`} currentPage={currentPage} totalPages={totalPages} onPageChange={onPageChange} />
+      <PageNumber compact={compact} currentPage={currentPage} totalPages={totalPages} onPageChange={onPageChange} />
       <button aria-label="Trang sau" onClick={onNext} disabled={!hasPdf || currentPage >= totalPages}>
         →
       </button>
 
-      <span className="toolbar-sep" />
+      </div>
+      <span className="toolbar-sep" aria-hidden="true" />
+      <div className="toolbar-group" role="group" aria-label="Thu phóng PDF">
 
       <button aria-label="Thu nhỏ" onClick={onZoomOut} disabled={!hasPdf || scale <= 0.5}>
         −
@@ -95,7 +109,8 @@ export default function PdfToolbar({
       <button aria-label="Phóng to" onClick={onZoomIn} disabled={!hasPdf || scale >= 3}>
         +
       </button>
-      <button onClick={onFitWidth} disabled={!hasPdf}>Vừa chiều rộng</button>
+      <button aria-label="Vừa chiều rộng" title="Vừa chiều rộng · kéo thanh chia để phóng rộng trang" className="fit-width-button" onClick={onFitWidth} disabled={!hasPdf}>{compact?"↔":"Vừa chiều rộng"}</button>
+      </div>
     </div>
   );
 }

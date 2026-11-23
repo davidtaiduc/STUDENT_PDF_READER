@@ -25,7 +25,7 @@ const AiResponse = memo(function AiResponse({ action, text, pageNumber }: {
   action: AiAction | 'note'; text: string; pageNumber?: number;
 }) {
   if (action === 'translate' || action === 'note') {
-    return createElement('div', { className: 'ai-answer ai-answer-plain', 'data-testid': 'ai-answer', 'data-ai-selection-page': pageNumber }, text);
+    return createElement('div', { className: `ai-answer ai-answer-plain${action === 'translate' ? ' ai-translation' : ''}`, 'data-testid': 'ai-answer', 'data-ai-selection-page': pageNumber }, text);
   }
   return createElement('div', { className: 'ai-answer ai-markdown', 'data-testid': 'ai-answer', 'data-ai-selection-page': pageNumber },
     createElement(Markdown, {

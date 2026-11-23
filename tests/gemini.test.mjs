@@ -7,7 +7,7 @@ import { generateGemini } from '../backend/src/services/ai/gemini.ts';
 import { createApi as buildApi } from '../backend/src/app.ts';
 import { appTokenAuthenticator } from '../backend/src/auth/appToken.ts';
 const testToken = 'test-token-012345678901234567890123';
-const createApi = options => buildApi({ aiConfigured: true,
+const createApi = options => buildApi({ authenticateUser:async()=>({kind:'user',id:'aaaaaaaaaaaaaaaaaaaaaaaa'}), aiConfigured: true,
   getHealth: async () => ({ service: 'student-pdf-reader-api', database: 'connected', ai: { configured: true }, accounts: { enabled: false } }), ...options });
 import { consumeCounter } from '../backend/src/services/usage/quota.ts';
 import { buildMessages } from '../backend/src/services/ai/prompts.ts';
@@ -109,7 +109,7 @@ test('API enforces authentication, CORS, validation, persisted limits and DB fai
   t.after(() => { server.closeAllConnections(); server.close(); });
   const url = `http://127.0.0.1:${server.address().port}/api/ai`;
   const payload = {action:'translate',selectedText:'Hello',before:'',after:'',question:''};
-  const send = (override={}, headers={}) => fetch(url,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${testToken}`,Origin:'http://allowed.test',...headers},body:JSON.stringify({...payload,...override})});
+  const send = (override={}, headers={}) => fetch(url,{method:'POST',headers:{Origin:'http://allowed.test','Content-Type':'application/json',Authorization:`Bearer ${testToken}`,Origin:'http://allowed.test',...headers},body:JSON.stringify({...payload,...override})});
   assert.equal((await send({}, {Authorization:'Bearer wrong'})).status,401);
   assert.equal((await send({}, {Origin:'http://evil.test'})).status,403);
   assert.equal((await send({action:'unknown'})).status,400);
@@ -142,7 +142,7 @@ test('quota counter has atomic cap, treats duplicate upsert as exhausted and pro
 test('API caps concurrency and aborts generation when the browser disconnects', async t => {
   const started = Promise.withResolvers();
   const cancelled = Promise.withResolvers();
-  const server = createApi({authenticate:appTokenAuthenticator(testToken),origins:[],model:'test',maxConcurrent:1,consumeQuota:async()=>true,
+  const server = createApi({authenticate:appTokenAuthenticator(testToken),origins:['http://allowed.test'],model:'test',maxConcurrent:1,consumeQuota:async()=>true,
     generate:async (_messages, signal, onText) => {
       await onText('partial'); started.resolve();
       await new Promise(resolve => signal.addEventListener('abort',resolve,{once:true}));
@@ -153,7 +153,7 @@ test('API caps concurrency and aborts generation when the browser disconnects', 
   t.after(()=>{server.closeAllConnections();server.close();});
   const url = `http://127.0.0.1:${server.address().port}/api/ai`;
   const controller = new AbortController();
-  const init = {method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${testToken}`},
+  const init = {method:'POST',headers:{Origin:'http://allowed.test','Content-Type':'application/json',Authorization:`Bearer ${testToken}`},
     body:JSON.stringify({action:'explain',selectedText:'A word',before:'',after:'',question:''})};
   const first = await fetch(url,{...init,signal:controller.signal});
   await started.promise;
@@ -173,4 +173,19 @@ test('Gemini interrupted or failed output is never marked complete', async t => 
     mock.mock.mockImplementation(async()=>new Response(body(events.map(frame))));
     await assert.rejects(generateGemini({apiKey:'secret',model:'test',messages:[{content:'s'},{content:'u'}],signal:signal(),onText:async()=>{}}), error => !error.message.includes('private provider details'));
   }
+});
+
+
+test('Gemini service_unavailable after text preserves partial output and clearly reports an incomplete answer',async t=>{
+ t.mock.method(globalThis,'fetch',async()=>new Response(body([
+  frame({event_type:'step.start',index:0,step:{type:'model_output'}}),
+  frame({event_type:'step.delta',index:0,delta:{type:'text',text:'Bản dịch còn dang dở'}}),
+  frame({event_type:'error',error:{code:'service_unavailable',message:'private provider details'}}),
+ ])));
+ let text='';
+ await assert.rejects(generateGemini({apiKey:'test-key',model:'test',messages:[{content:'s'},{content:'u'}],signal:signal(),onText:async part=>{text+=part;}}),error=>{
+  assert.equal(error.code,'provider_unavailable');assert.equal(error.retryable,true);assert.equal(error.retryAfterSeconds,5);
+  assert.match(error.message,/chưa đầy đủ/);assert.doesNotMatch(error.message,/private provider details/);return true;
+ });
+ assert.equal(text,'Bản dịch còn dang dở');
 });

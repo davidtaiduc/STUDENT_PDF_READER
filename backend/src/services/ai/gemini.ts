@@ -1,4 +1,5 @@
 import { readSse } from '../../../../shared/ai/sse.ts';
+import { AiRequestError } from '../../../../shared/ai/errors.ts';
 import { geminiFailure, readProviderError } from './geminiErrors.ts';
 
 export async function generateGemini(options: {
@@ -30,7 +31,13 @@ export async function generateGemini(options: {
       await options.onText(event.delta.text);
     }
     if (event.event_type === 'error' || event.event_type === 'interaction.failed' || event.event_type === 'interaction.cancelled') {
-      if (event.error || event.interaction?.error) throw geminiFailure(500, { error: event.error || event.interaction.error });
+      if (event.error || event.interaction?.error) {
+        const failure=geminiFailure(500,{error:event.error||event.interaction.error});
+        if(length>0&&failure.code==='provider_unavailable')throw new AiRequestError(
+          'Gemini đã ngắt phản hồi giữa chừng. Nội dung phía trên chưa đầy đủ. Hãy chờ một chút rồi bấm Thử lại câu hỏi.',
+          failure.code,true,failure.retryAfterSeconds);
+        throw failure;
+      }
       throw new Error('Gemini không thể hoàn tất yêu cầu này. Hãy thử đoạn khác.');
     }
     if (event.event_type === 'interaction.completed') {

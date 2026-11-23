@@ -1,32 +1,12 @@
-# Backend
+# StudyPDF backend
 
-API Node.js cho Gemini và MongoDB. Chạy các lệnh từ thư mục gốc `student-pdf-reader`; dự án dùng chung một `package.json` và `package-lock.json` để quản lý phiên bản dependency.
+Node.js HTTP API cho tài khoản, email, session và Gemini/quota. Xem [README gốc](../README.md) để chạy/cấu hình.
 
-```text
-backend/
-  src/
-    index.ts              Khởi động, cấu hình runtime và dừng server
-    app.ts                HTTP API, CORS, validation và streaming
-    auth/                 Xác thực nội bộ và quyền gọi từ web local
-    config/               Thiết lập DNS và đọc .env cho proxy web
-    database/             Pool kết nối MongoDB
-    services/
-      ai/                 Gemini, prompts và phân loại lỗi nhà cung cấp
-      usage/              Bộ đếm và chính sách hạn mức
-  scripts/
-    check-connection.mjs  Kiểm tra database và kết nối API
-  tsconfig.json           Kiểm tra kiểu backend
-```
+Từ 23/11/2026 đã gỡ toàn bộ API ghi chú/lịch sử `/api/study/*`, storage handler và index study_records. Không xóa collection/dữ liệu cũ. MongoDB lưu tài khoản, phiên, email token, counters/lease AI và thư viện mới qua GridFS (`library_heads_v1`, `library_archives_v1.files/chunks`).
 
-- Chạy toàn ứng dụng: `npm run dev` tại gốc, frontend + backend chung terminal; Ctrl+C dừng cả hai.
-- Chạy backend riêng: `npm run dev:backend` (`npm run server` vẫn dùng được).
-- Production: `npm run server:production`.
-- Kiểm tra kết nối: `npm run check:backend`.
-- Kiểm tra kiểu: `npx tsc -p backend/tsconfig.json`.
-- Test toàn dự án: `npm test`.
+Backend đọc .env thật ở gốc. npm run dev ở gốc chạy frontend và backend; dev:backend dùng Node --watch. Server production vẫn cần HTTPS/reverse proxy và cấu hình credential nội bộ phù hợp. Không đưa secret vào client.
 
-Backend đọc `.env` ở gốc qua lệnh npm. Không chuyển hoặc sao chép key vào frontend. Các kiểu dữ liệu, SSE và lỗi dùng chung nằm ở `shared/`; backend không import mã giao diện từ `src/`. Tests của frontend/backend và các luồng tích hợp nằm ở `tests/` tại gốc.
 
-Hiện dùng mã xác thực nội bộ giữa máy chủ web và API; tài khoản người dùng chưa được triển khai. Chế độ dev local không giới hạn số lượt theo phút/ngày; chính sách production và giới hạn Google giữ nguyên.
+Thư viện: `GET/HEAD/PUT /api/library/archive`, đọc cookie session, kiểm tra Origin cho PUT; không nhận userId làm quyền truy cập. `If-Match` bắt buộc để cập nhật, header `X-Library-Owner` tùy chọn ràng buộc tài khoản client dự kiến. Tối đa 544MiB và 120s/lượt; stream GridFS, tối đa 2 upload/instance. Chỉ thay head khi upload thành công và revision còn khớp; xóa blob upload lỗi/xung đột, giữ head cũ. Không đọc/migrate `study_records`. Thư viện offline/sao lưu vẫn hoạt động khi backend mất kết nối.
 
-Proxy Vite dùng `readProjectEnvironment` để đọc cùng `.env`, ưu tiên biến tiến trình và không lấy credential từ `.env.example`, `.env.local` hoặc file mode. Backend dùng cờ `--env-file-if-exists=.env`, không fallback sang file mẫu. Chỉ `VITE_AI_API_URL` là cấu hình tùy chọn được phép đưa vào frontend.
+Integration: `tests/integration/library-mongo.test.mjs` cần MONGODB_TEST_URI và MONGODB_TEST_ALLOW_WRITE=isolated-tests. Tạo database có tiền tố spr_lib_test_ ngẫu nhiên và chỉ dọn database đó. Không dùng tài khoản ứng dụng thật để QA.

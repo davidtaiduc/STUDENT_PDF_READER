@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 export function sampleSecretNames(source) {
   const values = parseEnv(source);
-  return ['GEMINI_API_KEY', 'AI_ACCESS_TOKEN', 'MONGODB_URI'].filter(key => values[key]?.trim());
+  return ['GEMINI_API_KEY', 'AI_ACCESS_TOKEN', 'MONGODB_URI', 'RESEND_API_KEY'].filter(key => values[key]?.trim());
 }
 
 export function checkSecrets(root) {

@@ -9,13 +9,14 @@ export async function streamGemini(options: { action: AiAction; excerpt: AiExcer
   const signal = AbortSignal.any([options.signal, AbortSignal.timeout(185000)]);
   try {
     const response = await fetch(`${(options.baseUrl || '').replace(/\/$/, '')}/api/ai`, {
-      method: 'POST', signal, headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: options.action, selectedText: options.excerpt.cleanedText,
+      method: 'POST', credentials: 'include', signal, headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: options.action, ...(options.excerpt.scope?{scope:options.excerpt.scope}:{}), selectedText: options.excerpt.cleanedText,
         before: options.excerpt.context.before.slice(-650), after: options.excerpt.context.after.slice(0, 650), question: options.question,
         ...(options.action === 'ask' && options.history?.length ? { history: options.history } : {}) }),
     });
     if (!response.ok) {
       const payload = await response.json().catch(() => null);
+      if (response.status === 401 && typeof window !== 'undefined') window.dispatchEvent(new Event('auth-invalid'));
       throw errorFromPayload(payload);
     }
     if (!response.body || !response.headers.get('content-type')?.includes('text/event-stream')) throw new Error('Backend AI trả phản hồi không hợp lệ.');
@@ -23,7 +24,7 @@ export async function streamGemini(options: { action: AiAction; excerpt: AiExcer
     let length = 0;
     await readSse(response.body, signal, data => {
       const event = JSON.parse(data);
-      if (event?.type === 'meta' && typeof event.model === 'string') options.onModel(event.model);
+      if (event?.type === 'meta' && typeof event.model === 'string') { options.onModel(event.model); if (typeof window !== 'undefined') window.dispatchEvent(new Event('usage-changed')); }
       else if (event?.type === 'text' && typeof event.text === 'string') {
         length += event.text.length;
         if (length > 50000) throw new Error('Kết quả quá dài.');
@@ -40,5 +41,5 @@ export async function streamGemini(options: { action: AiAction; excerpt: AiExcer
     if (error instanceof TypeError) throw new Error('Không kết nối được backend AI. Kiểm tra kết nối và dịch vụ backend.', { cause: error });
     if (error instanceof SyntaxError) throw new Error('Phản hồi AI không hợp lệ.', { cause: error });
     throw error;
-  }
+  } finally { if (typeof window !== 'undefined') window.dispatchEvent(new Event('usage-changed')); }
 }
