@@ -147,3 +147,19 @@ test('general chat survives reload and PDF switching, can be renamed and deleted
  await page.getByRole('button',{name:'Đổi tên chat Đoạn chat 1',exact:true}).click();await page.getByRole('textbox',{name:'Tên chat không gắn PDF',exact:true}).fill('Ôn tập không PDF');await page.getByRole('button',{name:'Lưu tên chat',exact:true}).click();await expect(nav.getByRole('button',{name:'Ôn tập không PDF',exact:true})).toBeVisible();
  await page.getByRole('button',{name:'Xóa chat Ôn tập không PDF',exact:true}).click();await page.getByRole('button',{name:'Xác nhận xóa chat',exact:true}).click();await expect(nav.getByRole('button',{name:'Ôn tập không PDF',exact:true})).toHaveCount(0);await expect(page.getByTestId('ai-answer')).toHaveCount(0);
 });
+
+
+test('background session checks preserve the PDF and draft through delay and failure, confirmed expiry locks the reader',async({page})=>{
+ await page.goto('http://127.0.0.1:5181');await openPdf(page);
+ const draft=page.getByRole('textbox',{name:'Câu hỏi của bạn',exact:true});await draft.fill('Câu hỏi đang viết dở');
+ const surface=await page.locator('.pdf-page-surface').elementHandle();
+ let release;const gate=new Promise(resolve=>{release=resolve;});let seen=0;
+ await page.route('**/api/auth/me',async route=>{seen++;await gate;await route.fulfill({status:503,contentType:'text/plain',body:'Temporarily unavailable'});});
+ await page.evaluate(()=>window.dispatchEvent(new Event('focus')));await expect.poll(()=>seen).toBeGreaterThan(0);
+ await expect(draft).toBeVisible();await expect(draft).toHaveValue('Câu hỏi đang viết dở');expect(await surface.evaluate(e=>e.isConnected)).toBe(true);
+ release();await expect.poll(async()=>page.locator('.assistant-session:not([hidden])').count()).toBe(1);
+ await page.unroute('**/api/auth/me');
+ await page.route('**/api/auth/me',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({authenticated:false,user:null})}));
+ await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+ await expect(page.locator('.study-entry')).toBeVisible();await expect(page.locator('.viewer')).toHaveCount(0);
+});

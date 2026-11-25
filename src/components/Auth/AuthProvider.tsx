@@ -12,7 +12,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     if (block) setStatus('checking');
     const id = ++version.current;
     try { const result = await authRequest('me'); if (id === version.current) { setUser(result.user); setStatus('ready'); setError(''); } }
-    catch { if (id === version.current) { setStatus('unavailable'); setError('Chưa kiểm tra được phiên đăng nhập.'); } }
+    catch { if (id === version.current) { setStatus(current => !block && current === 'ready' ? 'ready' : 'unavailable'); setError('Chưa kiểm tra được phiên đăng nhập.'); } }
   }, []);
   useEffect(() => {
     let cancelled = false;
@@ -23,11 +23,12 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     return () => { cancelled = true; };
   }, []);
   useEffect(() => {
-    const check = () => { if (document.visibilityState === 'visible') void refresh(); };
-    window.addEventListener('auth-invalid', check); window.addEventListener('focus', check); document.addEventListener('visibilitychange', check);
+    const check = () => { if (document.visibilityState === 'visible') void refresh(false); };
+    const invalidate = () => { void refresh(true); };
+    window.addEventListener('auth-invalid', invalidate); window.addEventListener('focus', check); document.addEventListener('visibilitychange', check);
     const timer = window.setInterval(() => { if (document.visibilityState === 'visible') void refresh(false); }, 60000);
     if (typeof BroadcastChannel !== 'undefined') { channel.current = new BroadcastChannel('studypdf-auth'); channel.current.onmessage = () => void refresh(); }
-    return () => { window.removeEventListener('auth-invalid', check); window.removeEventListener('focus', check); document.removeEventListener('visibilitychange', check); clearInterval(timer); channel.current?.close(); channel.current = null; };
+    return () => { window.removeEventListener('auth-invalid', invalidate); window.removeEventListener('focus', check); document.removeEventListener('visibilitychange', check); clearInterval(timer); channel.current?.close(); channel.current = null; };
   }, [refresh]);
   const setAccount = useCallback((account: AccountUser | null) => { ++version.current; setUser(current => account === null || current?.id === account.id ? account : current); setStatus('ready'); setError(''); if (!account) channel.current?.postMessage('session-changed'); }, []);
   const submit = async (action: 'login' | 'register' | 'logout', input?: object) => {
