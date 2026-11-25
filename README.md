@@ -183,3 +183,6 @@ Chat không bắt buộc chọn chữ: selectedText rỗng được chấp nhậ
 - `public/privacy.html`, trang giới thiệu và lời nhắc dữ liệu đã cập nhật về tự động lưu trên máy chủ. Sao lưu xuất/nhập vẫn hoạt động. Dữ liệu AI chỉ gửi Gemini khi người dùng chủ động Gửi/Dịch/Giải thích; lưu MongoDB không tự gọi AI.
 
 AI_MAX_OUTPUT_TOKENS: backend generation budget, default 8192 (previously 2048). Increase cautiously: higher output budgets can increase token use/cost. This does not eliminate upstream outages. Unclear recognized math must be confirmed instead of silently changing coefficients.
+
+### Library UI update — 26/11/2026
+Removed the user-facing backup/import/export and manual sync tools (LibraryTools), including related prompts. PDF/chat still persist automatically to the account; the internal archive format and authenticated cloud storage API remain necessary for automatic persistence. No user data was deleted.

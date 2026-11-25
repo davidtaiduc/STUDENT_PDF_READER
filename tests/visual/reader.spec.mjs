@@ -118,11 +118,11 @@ test('two browser contexts synchronize archives and keep local data on conflict'
    snapshot=req.postDataBuffer();if(!snapshot){const data=await req.frame().evaluate(async()=>{const {exportLibrary}=await import('/src/services/library/archive.ts');return Array.from(new Uint8Array(await(await exportLibrary('user:eeeeeeeeeeeeeeeeeeeeeeee')).arrayBuffer()));});snapshot=Buffer.from(data);}revision++;return route.fulfill({status:200,json:{revision},headers:{etag:`"${revision}"`}});
   });
   const [a,b]=await Promise.all(contexts.map(c=>c.newPage()));
-  await a.goto('http://127.0.0.1:5181');await openPdf(a);await a.getByText('Sao lưu và đồng bộ',{exact:true}).click();await a.getByRole('button',{name:'Đồng bộ tài khoản',exact:true}).click();await expect(a.locator('.library-tools')).toContainText('Đã lưu thay đổi vào tài khoản.');
+  await a.goto('http://127.0.0.1:5181');await openPdf(a);await expect.poll(()=>revision,{timeout:15000}).toBeGreaterThan(0);await expect(a.getByText('Sao lưu và đồng bộ',{exact:true})).toHaveCount(0);
   await b.goto('http://127.0.0.1:5181');await openPdf(b);const choosing=b.waitForEvent('filechooser');await b.getByRole('button',{name:'＋ Mở PDF mới',exact:true}).click();await(await choosing).setFiles({name:'second-device.pdf',mimeType:'application/pdf',buffer:createPdf(1)});await expect(b.locator('.textLayer')).toContainText('StudyPDF page 1');
-  await b.getByText('Sao lưu và đồng bộ',{exact:true}).click();await b.getByRole('button',{name:'Đồng bộ tài khoản',exact:true}).click();await expect(b.locator('.library-tools')).toContainText('Đã lưu thay đổi vào tài khoản.');
-  await a.getByRole('button',{name:'Đồng bộ tài khoản',exact:true}).click();await expect(a.getByRole('button',{name:'📁 second-device.pdf',exact:true})).toBeVisible();
-  conflict=true;await a.getByRole('button',{name:'Đổi tên PDF second-device.pdf',exact:true}).click();await a.getByRole('textbox',{name:'Tên PDF',exact:true}).fill('second-device-edited.pdf');await a.getByRole('button',{name:'Lưu tên PDF',exact:true}).click();await a.getByRole('button',{name:'Đồng bộ tài khoản',exact:true}).click();await expect(a.locator('.cloud-library-status')).toContainText('Chưa lưu được thay đổi');await expect(a.getByRole('button',{name:'📁 second-device-edited.pdf',exact:true})).toBeVisible();
+  await expect.poll(()=>snapshot?.includes(Buffer.from('second-device.pdf')),{timeout:15000}).toBe(true);
+  await a.evaluate(()=>window.dispatchEvent(new Event('focus')));await expect(a.getByRole('button',{name:'📁 second-device.pdf',exact:true})).toBeVisible();
+  conflict=true;await a.getByRole('button',{name:'Đổi tên PDF second-device.pdf',exact:true}).click();await a.getByRole('textbox',{name:'Tên PDF',exact:true}).fill('second-device-edited.pdf');await a.getByRole('button',{name:'Lưu tên PDF',exact:true}).click();await expect(a.locator('.cloud-library-status')).toContainText('Chưa lưu được thay đổi');await expect(a.getByRole('button',{name:'📁 second-device-edited.pdf',exact:true})).toBeVisible();
  }finally{await Promise.all(contexts.map(c=>c.close()));}
 });
 
