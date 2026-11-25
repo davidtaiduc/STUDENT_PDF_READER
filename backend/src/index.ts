@@ -60,7 +60,7 @@ async function main() {
         ai: { configured: !!apiKey }, accounts: { enabled: true }, requestLimits: 'limited' }),
       admitGlobal:()=>{const day=Math.floor(Date.now()/86400000);return consumeCounter(database.db.collection('ai_global_budget_v1'),`day:${day}`,positive('GLOBAL_DAILY_AI_LIMIT',500),new Date((day+2)*86400000));},
       consumeQuota: quota.consume,
-      generate: (messages, signal, onText) => generateGemini({ apiKey, model, messages, signal, onText }),
+      generate: (messages, signal, onText) => generateGemini({ apiKey, model, messages, signal, onText, maxOutputTokens: positive('AI_MAX_OUTPUT_TOKENS',8192) }),
     });
     server.on('error', () => { console.error('Không mở được cổng backend.'); void database.close(); process.exitCode = 1; });
     server.listen(port, host, () => {

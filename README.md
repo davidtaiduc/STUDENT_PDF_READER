@@ -181,3 +181,5 @@ Chat không bắt buộc chọn chữ: selectedText rỗng được chấp nhậ
 - Trạng thái riêng trong trình đọc: chờ lưu, đang đồng bộ, đã đồng bộ MongoDB hoặc lỗi sẽ thử lại. Chỉ báo đã đồng bộ khi server xác nhận hoặc HEAD và chữ ký khớp bản đã xác nhận. Bản trên trình duyệt là bộ đệm, không đồng nghĩa đã lên máy chủ.
 - Bộ sưu tập chính: users/sessions cho tài khoản; library_heads_v1 và library_archives_v1.files/chunks cho snapshot PDF/chat. Snapshot gồm dữ liệu PDF thật, không chỉ đường dẫn file trên máy. Kiến trúc hiện vẫn dùng snapshot trọn thư viện khi có thay đổi; với thư viện lớn cần cân nhắc API incremental sau này.
 - `public/privacy.html`, trang giới thiệu và lời nhắc dữ liệu đã cập nhật về tự động lưu trên máy chủ. Sao lưu xuất/nhập vẫn hoạt động. Dữ liệu AI chỉ gửi Gemini khi người dùng chủ động Gửi/Dịch/Giải thích; lưu MongoDB không tự gọi AI.
+
+AI_MAX_OUTPUT_TOKENS: backend generation budget, default 8192 (previously 2048). Increase cautiously: higher output budgets can increase token use/cost. This does not eliminate upstream outages. Unclear recognized math must be confirmed instead of silently changing coefficients.

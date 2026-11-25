@@ -72,6 +72,7 @@ test('Gemini adapter uses server key, stateless interactions and only final outp
     assert.equal(init.headers['x-goog-api-key'], 'server-only-test-key');
     const payload = JSON.parse(init.body);
     assert.equal(payload.store, false);
+    assert.equal(payload.generation_config.max_output_tokens,8192);
     assert.equal(payload.system_instruction, 'system');
     return new Response(body([
       frame({event_type:'step.start',index:0,step:{type:'thought'}}),

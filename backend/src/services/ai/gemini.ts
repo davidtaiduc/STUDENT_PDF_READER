@@ -4,14 +4,14 @@ import { geminiFailure, readProviderError } from './geminiErrors.ts';
 
 export async function generateGemini(options: {
   apiKey: string; model: string; messages: { role: string; content: string }[];
-  signal: AbortSignal; onText: (text: string) => Promise<void>;
+  maxOutputTokens?: number; signal: AbortSignal; onText: (text: string) => Promise<void>;
 }) {
   const response = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions?alt=sse', {
     method: 'POST', signal: options.signal,
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': options.apiKey },
     body: JSON.stringify({ model: options.model, store: false, stream: true,
       system_instruction: options.messages[0].content, input: options.messages[1].content,
-      generation_config: { max_output_tokens: 2048 },
+      generation_config: { max_output_tokens: options.maxOutputTokens ?? 8192 },
     }),
   });
   if (!response.ok || !response.body) {

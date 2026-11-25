@@ -16,3 +16,12 @@ test('button actions remain narrowly scoped and ignore chat requests and history
   assert.equal(data.question,undefined);assert.equal(data.conversationHistory,undefined);assert.match(messages[0].content,/không.*giải bài/);
  }
 });
+
+
+test('math questions must preserve uncertain recognized coefficients and separate equations',()=>{
+ const messages=buildMessages('ask',{cleanedText:'0.5x-15y=1 -x+3y=2',context:{before:'Nội dung được nhận dạng từ ảnh',after:''}},'Làm câu này');
+ assert.equal(JSON.parse(messages[1].content).selectedText,'0.5x-15y=1 -x+3y=2');
+ assert.match(messages[0].content,/15y không được đổi thành 1.5y/);
+ assert.match(messages[0].content,/hỏi người dùng xác nhận/);
+ assert.match(messages[0].content,/mỗi phương trình trên một dòng riêng/);
+});
