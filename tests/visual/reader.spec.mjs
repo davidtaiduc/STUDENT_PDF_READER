@@ -122,7 +122,7 @@ test('two browser contexts synchronize archives and keep local data on conflict'
   await b.goto('http://127.0.0.1:5181');await openPdf(b);const choosing=b.waitForEvent('filechooser');await b.getByRole('button',{name:'＋ Mở PDF mới',exact:true}).click();await(await choosing).setFiles({name:'second-device.pdf',mimeType:'application/pdf',buffer:createPdf(1)});await expect(b.locator('.textLayer')).toContainText('StudyPDF page 1');
   await expect.poll(()=>snapshot?.includes(Buffer.from('second-device.pdf')),{timeout:15000}).toBe(true);
   await a.evaluate(()=>window.dispatchEvent(new Event('focus')));await expect(a.getByRole('button',{name:'📁 second-device.pdf',exact:true})).toBeVisible();
-  conflict=true;await a.getByRole('button',{name:'Đổi tên PDF second-device.pdf',exact:true}).click();await a.getByRole('textbox',{name:'Tên PDF',exact:true}).fill('second-device-edited.pdf');await a.getByRole('button',{name:'Lưu tên PDF',exact:true}).click();await expect(a.locator('.cloud-library-status')).toContainText('Chưa lưu được thay đổi');await expect(a.getByRole('button',{name:'📁 second-device-edited.pdf',exact:true})).toBeVisible();
+  conflict=true;await a.getByRole('button',{name:'Đổi tên PDF second-device.pdf',exact:true}).click();await a.getByRole('textbox',{name:'Tên PDF',exact:true}).fill('second-device-edited.pdf');await a.getByRole('button',{name:'Lưu tên PDF',exact:true}).click();await expect(a.locator('.cloud-library-status')).toHaveCount(0);await expect(a.getByRole('button',{name:'📁 second-device-edited.pdf',exact:true})).toBeVisible();
  }finally{await Promise.all(contexts.map(c=>c.close()));}
 });
 

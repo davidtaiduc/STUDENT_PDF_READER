@@ -43,7 +43,7 @@ export default function PdfViewer({documentsOpen,onToggleDocuments,onDocumentCha
   const [fitToWidth,setFitToWidth]=useState(true);
   const chatActionRef=useRef<ChatActionHandle>(null);
   const canAutoSync=useCallback(()=>!chatActionRef.current?.isBusy(),[]);
-  const cloud=useLibraryAutoSync(sessionOwner,canAutoSync);
+  useLibraryAutoSync(sessionOwner,canAutoSync);
   const [chatReveal,setChatReveal]=useState(0);
   const viewerContainerRef=useRef<HTMLElement>(null);
 
@@ -199,7 +199,6 @@ export default function PdfViewer({documentsOpen,onToggleDocuments,onDocumentCha
       <section hidden={!!documentOwner&&documentOwner!==ownerScope} ref={viewerContainerRef} className="viewer" aria-label="Tài liệu PDF">
       <div className="document-name" title={fileName}>{fileName || "Mở PDF trên máy để bắt đầu đọc"}</div>
       {storageWarning && <p className="storage-warning" role="status">{storageWarning}</p>}
-      {cloud.state.phase==='error'&&<p className="cloud-library-status cloud-error" role="status">Chưa lưu được thay đổi vào tài khoản. Bản trên máy vẫn được giữ và sẽ tự lưu lại. <button type="button" onClick={cloud.retry}>Thử lưu lại</button></p>}
       {pdf&&<PdfRegionOcr key={ocrScope} pdf={pdf} pageNumber={currentPage} rootRef={viewerContainerRef} onSelection={receiveRegion}/> }
       <div className="viewer-scroll" ref={viewerRef} aria-busy={loading}>
         {loading && <p className="hint" role="status">Đang mở PDF…</p>}

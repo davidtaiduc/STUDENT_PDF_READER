@@ -14,5 +14,5 @@ test('PDF and completed chat save automatically and another device restores with
  }finally{await Promise.allSettled(contexts.map(c=>c.close()));}
 });
 test('network failure preserves local PDF and reconnect uploads it automatically',async({page,context})=>{
- const state={entries:new Map(),puts:0,offline:true};await mockCloud(context,state);await login(page);await upload(page,'offline.pdf');await expect(page.locator('.cloud-library-status')).toContainText('sẽ tự lưu lại.',{timeout:15000});await expect(page.getByRole('button',{name:'📁 offline.pdf',exact:true})).toBeVisible();expect(state.puts).toBe(0);state.offline=false;await page.evaluate(()=>window.dispatchEvent(new Event('online')));await expect.poll(()=>state.puts,{timeout:15000}).toBe(1);await expect(page.locator('.cloud-library-status')).toHaveCount(0);
+ const state={entries:new Map(),puts:0,offline:true};await mockCloud(context,state);await login(page);await upload(page,'offline.pdf');await expect(page.locator('.cloud-library-status')).toHaveCount(0);await expect(page.getByRole('button',{name:'📁 offline.pdf',exact:true})).toBeVisible();expect(state.puts).toBe(0);state.offline=false;await page.evaluate(()=>window.dispatchEvent(new Event('online')));await expect.poll(()=>state.puts,{timeout:15000}).toBe(1);await expect(page.locator('.cloud-library-status')).toHaveCount(0);
 });
