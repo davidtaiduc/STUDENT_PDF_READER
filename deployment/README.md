@@ -10,7 +10,7 @@ Một origin HTTPS → Nginx → gateway Node cổng 8080 → API riêng trên l
 2. Tự điền secret trong `.env` hoặc biến môi trường hosting; không đưa file này vào Git/image. Không dùng `.env.example` làm runtime.
 3. `ALLOWED_ORIGINS=https://ten-mien-cua-ban`, `APP_PUBLIC_URL=https://ten-mien-cua-ban`, `VITE_AI_API_URL=` (cùng origin). Khi đổi biến build, build lại.
 4. MongoDB có tài khoản quyền tối thiểu trên database ứng dụng; Resend có tên miền gửi được xác minh, MAIL_FROM thuộc tên miền đó.
-5. `PORT=3001`, `WEB_PORT=8080`, `WEB_HOST=127.0.0.1`; Nginx cùng máy dùng `TRUST_PROXY=loopback`. Chỉ public cổng 443/80 cần thiết, không public MongoDB/API 3001/gateway 8080.
+5. `PORT=8080`, `API_PORT=3001`, `WEB_HOST=127.0.0.1`; Nginx cùng máy dùng `TRUST_PROXY=loopback`. Chỉ public cổng 443/80 cần thiết, không public MongoDB/API 3001/gateway 8080.
 6. `npm run check:readiness -- --production` phải đạt. Script chỉ hiện tên biến, không in giá trị.
 
 ## Chạy
@@ -41,3 +41,6 @@ DELETE `/api/users/me` cần cookie, Origin hợp lệ, mật khẩu và cụm x
 ## Kiểm tra ngoài môi trường local
 
 `npm run test:integration` yêu cầu MONGODB_TEST_URI riêng và MONGODB_TEST_ALLOW_WRITE=isolated-tests. Các test tạo database ngẫu nhiên rồi dọn đúng database đó. Không trỏ vào database ứng dụng. Playwright WebKit không thay thế kiểm thử Safari trên iPhone thật. Trước công khai, người vận hành cần điền danh tính/kênh liên hệ và chính sách backup trong trang quyền riêng tư/điều khoản.
+
+## Render (Docker)
+Set PORT=10000, API_PORT=3001, WEB_HOST=0.0.0.0. PORT takes precedence over WEB_PORT for the public gateway. Health check: /api/health. Set ALLOWED_ORIGINS and APP_PUBLIC_URL to the actual HTTPS service URL without trailing slash. Configure secrets in Render environment variables; .env is intentionally absent from the image.

@@ -34,9 +34,9 @@ export function createWebServer({root=resolve('dist'),apiPort=3001,token,origins
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
  if(!process.env.AI_ACCESS_TOKEN)throw new Error('Cần AI_ACCESS_TOKEN phía máy chủ.');
- const apiPort=Number(process.env.PORT||3001),webPort=Number(process.env.WEB_PORT||8080);
- if(!Number.isInteger(webPort)||webPort<1||webPort>65535||webPort===apiPort)throw new Error('WEB_PORT không hợp lệ hoặc trùng PORT.');
- const child=spawn(process.execPath,['--experimental-strip-types','backend/src/index.ts'],{stdio:'inherit',env:{...process.env,NODE_ENV:'production',HOST:'127.0.0.1',TRUST_PROXY:'loopback'}});
+ const apiPort=Number(process.env.API_PORT||3001),webPort=Number(process.env.PORT||process.env.WEB_PORT||8080);
+ if(![apiPort,webPort].every(p=>Number.isInteger(p)&&p>=1&&p<=65535)||webPort===apiPort)throw new Error('Cổng web (PORT/WEB_PORT) và API_PORT phải hợp lệ và khác nhau.');
+ const child=spawn(process.execPath,['--experimental-strip-types','backend/src/index.ts'],{stdio:'inherit',env:{...process.env,NODE_ENV:'production',PORT:String(apiPort),HOST:'127.0.0.1',TRUST_PROXY:'loopback'}});
  const server=createWebServer({token:process.env.AI_ACCESS_TOKEN,apiPort,origins:(process.env.ALLOWED_ORIGINS||'').split(',').map(s=>s.trim()),trustLoopback:process.env.TRUST_PROXY==='loopback'});
  let closing=false;const stop=()=>{if(closing)return;closing=true;server.close();server.closeAllConnections();child.kill('SIGTERM');};
  child.on('error',()=>{console.error('Không khởi động được API.');process.exitCode=1;stop();});child.on('exit',code=>{if(!closing){process.exitCode=code||1;stop();}});
