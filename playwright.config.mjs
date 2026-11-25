@@ -1,0 +1,2 @@
+import {defineConfig} from '@playwright/test';
+export default defineConfig({testDir:'tests/visual',workers:1,timeout:45000,outputDir:'tmp/visual-test-results',reporter:'line',use:{browserName:process.env.UI_BROWSER||'chromium',deviceScaleFactor:1,locale:'vi-VN',reducedMotion:'reduce'},webServer:{command:'node --experimental-strip-types scripts/visual-preview.mjs',url:'http://127.0.0.1:5181',reuseExistingServer:false,timeout:30000}});

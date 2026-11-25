@@ -1,0 +1,26 @@
+@import url('./fonts/fonts.css');
+
+/* Shared visual tokens for the reader and introduction. */
+:root {
+  --desk: #DDE1E4;
+  --panel: #F7F8F9;
+  --ink: #1B2733;
+  --muted: #5B6670;
+  --link: #1F6F78;
+  --highlighter: #FFD84D;
+  --paper: #FFFFFF;
+  --border: #CDD3D8;
+  --surface-hover: #E9EDF0;
+  --danger: #972F2F;
+  --success: #306653;
+  --caution: #805014;
+  --focus: #1F6F78;
+  --selection: color-mix(in srgb, var(--highlighter) 62%, transparent);
+  --font-ui: 'Be Vietnam Pro', 'Segoe UI', sans-serif;
+  --font-heading: 'Literata', Georgia, serif;
+  --radius-control: 5px;
+  --radius-panel: 12px;
+  --radius-page: 2px;
+  --reader-accent: var(--ink);
+  --reader-muted: var(--muted);
+}

@@ -108,3 +108,20 @@ test('current session deletion clears cookie and sensitive wrong-password attemp
  assert.equal(result.status,200);assert.equal(result.body.authenticated,false);assert.match(result.cookie,/Max-Age=0/);
  assert.equal((await request('users/me','GET',undefined,cookieA)).status,401);assert.equal((await request('users/me','GET',undefined,cookieA2)).status,200);
 });
+
+
+test('account deletion requires reauthentication and confirmation, isolates users and invalidates every session',async t=>{
+ const {request,cookieA,cookieA2,cookieB,repo}=await fixture(t);
+ assert.equal((await request('users/me','DELETE',{currentPassword:password},cookieA)).status,400);
+ assert.equal((await request('users/me','DELETE',{currentPassword:'wrong-password',confirmation:'XÓA TÀI KHOẢN'},cookieA)).status,400);
+ assert.equal((await request('users/me','DELETE',{currentPassword:password,confirmation:'XÓA TÀI KHOẢN'},cookieA,'https://other.test')).status,403);
+ const removed=await request('users/me','DELETE',{currentPassword:password,confirmation:'XÓA TÀI KHOẢN'},cookieA);
+ assert.equal(removed.status,200);assert.equal(removed.body.authenticated,false);assert.match(removed.cookie,/Max-Age=0/);
+ assert.equal((await request('users/me','GET',undefined,cookieA)).status,401);
+ assert.equal((await request('users/me','GET',undefined,cookieA2)).status,401);
+ assert.equal((await request('users/me','GET',undefined,cookieB)).status,200);
+ assert.equal(await repo.findUser('a@example.test'),null);
+ assert.equal((await request('auth/login','POST',{email:'a@example.test',password})).status,401);
+ assert.ok(repo.users[0].deletedAt);assert.equal(repo.users[0].passwordHash,'!deleted');
+ assert.equal((await request('users/me','DELETE',{currentPassword:password,confirmation:'XÓA TÀI KHOẢN'},cookieA)).status,401);
+});

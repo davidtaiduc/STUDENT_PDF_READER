@@ -21,6 +21,7 @@ export interface ApiOptions {
   authHandler?: (req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse) => Promise<void>;
   getHealth: () => Promise<BackendHealth>;
   consumeQuota: (principal: Principal) => Promise<boolean | QuotaDecision>;
+  admitGlobal?: () => Promise<boolean>;
   generate: (messages: { role: string; content: string }[], signal: AbortSignal, onText: (text: string) => Promise<void>) => Promise<void>;
 }
 
@@ -109,6 +110,10 @@ export function createApi(options: ApiOptions) {
         if (!releaseSlot) { fail(429, 'AI đang xử lý yêu cầu khác. Vui lòng thử lại.', { code: 'app_busy', retryable: true, retryAfterSeconds: 2 }); return; }
       }
       controller.signal.throwIfAborted();
+      if(options.admitGlobal){
+        let admitted=false;try{admitted=await options.admitGlobal();}catch{fail(503,'Chưa kiểm tra được ngân sách lượt AI của ứng dụng.');return;}
+        if(!admitted){const retry=Math.ceil((86400000-Date.now()%86400000)/1000);res.setHeader('Retry-After',String(retry));fail(429,'Ứng dụng đã hết ngân sách lượt AI hôm nay. Hãy quay lại sau 00:00 UTC.',{code:'app_quota',retryable:true,retryAfterSeconds:retry});return;}
+      }
       let allowed;
       try { allowed = await options.consumeQuota(principal); }
       catch { fail(503, 'Không kết nối được cơ sở dữ liệu. Hãy thử lại sau.'); return; }

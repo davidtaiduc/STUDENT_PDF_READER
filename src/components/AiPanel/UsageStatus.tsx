@@ -13,12 +13,12 @@ export default function UsageStatus({ownerScope}:{ownerScope:OwnerScope}) {
       if(active&&id===sequence.current)setSnapshot({scope:ownerScope,data});
     }).catch(error=>{
       if(error instanceof AccountRequestError&&error.status===401)window.dispatchEvent(new Event('auth-invalid'));
-      if(active&&id===sequence.current)setSnapshot({scope:ownerScope,error:'Chưa đọc được hạn mức AI. Hãy kiểm tra kết nối và thử lại.'});
+      if(active&&id===sequence.current)setSnapshot({scope:ownerScope,error:'Chưa tải được số lượt còn lại. Bấm làm mới để thử lại.'});
     });};
     load();window.addEventListener('usage-changed',load);
     return()=>{active=false;window.removeEventListener('usage-changed',load);};
   },[ownerScope,revision]);
-  if(ownerScope==='guest')return <p className="usage-status">Đăng nhập để sử dụng Gemini. Ghi chú khách vẫn được giữ riêng.</p>;
+  if(ownerScope==='guest')return <p className="usage-status">Đăng nhập để hỏi AI và lưu hội thoại.</p>;
   const current=snapshot?.scope===ownerScope?snapshot:null;
-  return <div className="usage-status" role="status">{current?.data?<><span>Đã dùng {current.data.dailyUsed}/{current.data.dailyLimit} lượt hôm nay · Còn {current.data.dailyRemaining}</span>{!current.data.dailyRemaining&&<strong>Đã hết lượt hôm nay.</strong>}<small title={`Đặt lại: ${new Date(current.data.resetAt).toLocaleString('vi-VN')}`}>Đặt lại 00:00 UTC</small></>:<span>{current?.error??'Đang tải hạn mức AI…'}</span>}<button aria-label="Làm mới hạn mức" title="Làm mới hạn mức" onClick={()=>setRevision(value=>value+1)}>↻</button></div>;
+  return <div className="usage-status" role="status">{current?.data?<><span>Đã dùng {current.data.dailyUsed}/{current.data.dailyLimit} lượt hôm nay · Còn {current.data.dailyRemaining}</span>{!current.data.dailyRemaining&&<strong>Đã hết lượt hôm nay.</strong>}<small title={`Đặt lại: ${new Date(current.data.resetAt).toLocaleString('vi-VN')}`}>Lượt mới lúc {new Date(current.data.resetAt).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})}</small></>:<span>{current?.error??'Đang tải hạn mức AI…'}</span>}<button aria-label="Làm mới hạn mức" title="Làm mới hạn mức" onClick={()=>setRevision(value=>value+1)}>↻</button></div>;
 }

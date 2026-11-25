@@ -2,7 +2,7 @@ import {exportLibrary,parseArchive,importLibrary} from '../src/services/library/
 import 'fake-indexeddb/auto';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {pdfId,saveDocument,loadDocument,listDocuments,saveChat,listChats,loadChat,renameChat,deleteChat,renameDocument,deleteDocument,readSnapshot,mergeSnapshot} from '../src/services/library/store.ts';
+import {clearAccountLibrary,pdfId,saveDocument,loadDocument,listDocuments,saveChat,listChats,loadChat,renameChat,deleteChat,renameDocument,deleteDocument,readSnapshot,mergeSnapshot} from '../src/services/library/store.ts';
 const alice='user:aaaaaaaaaaaaaaaaaaaaaaaa',bob='user:bbbbbbbbbbbbbbbbbbbbbbbb';
 const bytes=new TextEncoder().encode('%PDF-test').buffer;
 const turn={id:'turn1',question:'Giải thích?',answer:'Câu trả lời',model:'Gemini',createdAt:1,status:'ready',selection:{pageNumber:1,cleanedText:'Proof',context:{before:'',after:''}}};
@@ -81,4 +81,45 @@ test('document rename and delete cascade, stale autosave and old archive cannot 
  await importLibrary(bob,archive,false);assert.equal((await listDocuments(bob)).some(d=>d.id===id),false);assert.deepEqual(await listChats(bob,id),[]);
  assert.ok((await listDocuments(alice)).some(d=>d.id===id));
  await importLibrary(bob,archive);assert.ok((await listDocuments(bob)).some(d=>d.id===id));assert.ok((await listChats(bob,id)).length);
+});
+
+
+test('clearing account library deletes only its documents and chats',async()=>{
+ const owner='user:cccccccccccccccccccccccc',other='user:dddddddddddddddddddddddd',id=await pdfId(bytes);
+ await saveDocument(owner,id,new File([bytes],'delete.pdf'));await saveDocument(other,id,new File([bytes],'keep.pdf'));
+ await saveChat(owner,id,'remove-me',[turn],0);await saveChat(other,id,'keep-me',[turn],0);
+ await clearAccountLibrary(owner);
+ assert.deepEqual(await listDocuments(owner),[]);assert.deepEqual(await listChats(owner,id),[]);
+ assert.equal((await listDocuments(other)).length,1);assert.equal((await listChats(other,id)).length,1);
+ await assert.rejects(saveChat(owner,id,'remove-me',[turn],1));await assert.rejects(clearAccountLibrary('guest'));
+});
+
+
+test('new storage uses bytes and legacy Blob documents still reopen and export',async()=>{
+ const owner='user:ffffffffffffffffffffffff',id=await pdfId(bytes);
+ await saveDocument(owner,id,new File([bytes],'modern.pdf'));
+ assert.ok((await readSnapshot(owner)).documents[0].blob instanceof ArrayBuffer);
+ const db=await new Promise((resolve,reject)=>{const r=indexedDB.open('studypdf-library',1);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});
+ await new Promise((resolve,reject)=>{const tx=db.transaction('documents','readwrite');tx.oncomplete=resolve;tx.onabort=()=>reject(tx.error);const r=tx.objectStore('documents').get([owner,id]);r.onsuccess=()=>tx.objectStore('documents').put({...r.result,name:'legacy.pdf',blob:new Blob([bytes])});});db.close();
+ assert.deepEqual(await(await loadDocument(owner,id)).arrayBuffer(),bytes);
+ const exported=await parseArchive(owner,await exportLibrary(owner));assert.equal(exported.documents[0].name,'legacy.pdf');
+});
+
+import {GENERAL_CHAT_ID} from '../src/services/library/store.ts';
+test('general chats persist without PDF, number independently, isolate owners and survive archive roundtrip',async()=>{
+ const owner='user:111111111111111111111111',other='user:222222222222222222222222';
+ const general={...turn,selection:{pageNumber:1,cleanedText:'',context:{before:'',after:''}}};
+ await saveChat(owner,GENERAL_CHAT_ID,'general-one',[general],0);await saveChat(owner,GENERAL_CHAT_ID,'general-two',[general],0);
+ assert.deepEqual(await listDocuments(owner),[]);assert.equal((await listChats(owner,GENERAL_CHAT_ID)).length,2);assert.deepEqual(await listChats(other,GENERAL_CHAT_ID),[]);
+ await renameChat(owner,GENERAL_CHAT_ID,'general-one','Ôn tập riêng');assert.equal((await loadChat(owner,GENERAL_CHAT_ID,'general-one')).title,'Ôn tập riêng');
+ const archive=await exportLibrary(owner);await importLibrary(other,archive);assert.equal((await listChats(other,GENERAL_CHAT_ID)).length,2);assert.deepEqual(await listDocuments(other),[]);await assert.rejects(loadDocument(owner,GENERAL_CHAT_ID));
+ await deleteChat(owner,GENERAL_CHAT_ID,'general-one');await assert.rejects(saveChat(owner,GENERAL_CHAT_ID,'general-one',[general],1));
+ await clearAccountLibrary(owner);await assert.rejects(saveChat(owner,GENERAL_CHAT_ID,'late',[general],0));
+});
+test('archive rejects a general container carrying PDF bytes or an unreserved identifier',async()=>{
+ const owner='user:333333333333333333333333';const json=JSON.stringify({version:1,documents:[{id:'f'.repeat(64),kind:'general',name:'bad',size:0,openedAt:1,updatedAt:1,nextChatNumber:1}],chats:[]});const bytes=new TextEncoder().encode(json),size=new Uint8Array(4);new DataView(size.buffer).setUint32(0,bytes.length);await assert.rejects(parseArchive(owner,new Blob(['STUDYPDF1\n',size,bytes])));
+});
+
+test('repeated import of a deleted document and chat converges without extra writes',async()=>{
+ const owner='user:444444444444444444444444',id=await pdfId(bytes);await saveDocument(owner,id,new File([bytes],'deleted.pdf'));await saveChat(owner,id,'deleted-chat',[turn],0);await deleteDocument(owner,id);await mergeSnapshot(owner,await readSnapshot(owner),false);const before=await readSnapshot(owner);let changes=0;const {subscribeLibrary}=await import('../src/services/library/store.ts');const stop=subscribeLibrary(()=>changes++);try{await mergeSnapshot(owner,before,false);assert.equal(changes,0);assert.deepEqual(await readSnapshot(owner),before);}finally{stop();}
 });

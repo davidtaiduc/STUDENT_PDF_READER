@@ -2,7 +2,8 @@ export function fakeAuthRepository() {
   const users = [], sessions = [], counters = new Map();
   return {
     users, sessions, counters,
-    findUser: async email => { const user=users.find(u => u.email === email); return user ? {...user} : null; },
+    deleteAccount: async (id,hash,version) => {const u=users.find(u=>u._id.equals(id)&&u.passwordHash===hash&&(u.sessionVersion??0)===version&&!u.deletedAt);if(!u)return false;u.deletedAt=new Date();u.email=id.toHexString()+'@deleted.invalid';u.displayName='Tài khoản đã xóa';u.passwordHash='!deleted';u.sessionVersion=version+1;delete u.emailTokens;delete u.emailVerifiedAt;return true;},
+    findUser: async email => { const user=users.find(u => u.email === email&&!u.deletedAt); return user ? {...user} : null; },
     insertUser: async user => { if(users.some(u=>u.email===user.email)) throw Object.assign(new Error('duplicate'),{code:11000}); users.push(user); },
     insertSession: async session => { sessions.push(session); },
     findSession: async (hash,now) => sessions.find(s=>s.tokenHash===hash && s.expiresAt>now) ?? null,

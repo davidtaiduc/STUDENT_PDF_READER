@@ -34,11 +34,11 @@ export async function streamGemini(options: { action: AiAction; excerpt: AiExcer
       else throw new Error('Phản hồi AI không hợp lệ.');
     });
     if (!done) throw new Error('Kết nối AI bị ngắt. Hãy thử lại.');
-    if (!length) throw new Error('Gemini không trả nội dung. Hãy thử lại.');
+    if (!length) throw new Error('Chưa nhận được câu trả lời. Hãy thử gửi lại.');
   } catch (error) {
     options.signal.throwIfAborted();
-    if (signal.aborted) throw new Error('Gemini phản hồi quá lâu. Hãy thử lại.', { cause: error });
-    if (error instanceof TypeError) throw new Error('Không kết nối được backend AI. Kiểm tra kết nối và dịch vụ backend.', { cause: error });
+    if (signal.aborted) throw new Error('AI trả lời lâu hơn dự kiến. Bạn hãy thử lại sau.', { cause: error });
+    if (error instanceof TypeError) throw new Error('Chưa gửi được yêu cầu. Hãy kiểm tra mạng rồi thử lại.', { cause: error });
     if (error instanceof SyntaxError) throw new Error('Phản hồi AI không hợp lệ.', { cause: error });
     throw error;
   } finally { if (typeof window !== 'undefined') window.dispatchEvent(new Event('usage-changed')); }

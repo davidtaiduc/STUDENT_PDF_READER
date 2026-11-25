@@ -1,3 +1,5 @@
+import { consumeCounter } from './services/usage/quota.ts';
+import { purgeDeletedAccounts } from './auth/deletion.ts';
 import {createLibraryHandler} from './library/cloud.ts';
 import { createEmailHandler, mongoEmailRepository, resendMailer } from './auth/email.ts';
 import { mongoAiAttempts } from './services/usage/attempts.ts';
@@ -44,6 +46,10 @@ async function main() {
   const authRepository = mongoAuthRepository(database.db);
   try {
     await database.connect();
+    let purging=false;
+    const purge=async()=>{if(purging)return;purging=true;try{await purgeDeletedAccounts(database.db);}catch{console.error('Chưa dọn xong dữ liệu tài khoản đã xóa; sẽ thử lại.');}finally{purging=false;}};
+    await purge();
+    const cleanupTimer=setInterval(()=>{void purge();},60000);cleanupTimer.unref();
     const appUrl = process.env.APP_PUBLIC_URL || origins[0];
     const publicUrl = new URL(appUrl);
     if (!origins.includes(publicUrl.origin) || publicUrl.pathname !== '/' || publicUrl.search || publicUrl.hash || (publicUrl.protocol !== 'https:' && !['localhost','127.0.0.1','[::1]'].includes(publicUrl.hostname))) throw new Error('APP_PUBLIC_URL cần là origin frontend HTTPS, hoặc loopback local, nằm trong ALLOWED_ORIGINS.');
@@ -52,6 +58,7 @@ async function main() {
       allowAiAttempt: mongoAiAttempts(database.db, positive('USER_AI_ATTEMPTS_PER_MINUTE', 30)), readUsage: quota.read, acquireSlot: mongoAiSlots(database.db, maxConcurrent), origins, model, maxConcurrent, aiConfigured: !!apiKey,
       getHealth: async () => ({ service: 'student-pdf-reader-api', database: await database.isConnected() ? 'connected' : 'unavailable',
         ai: { configured: !!apiKey }, accounts: { enabled: true }, requestLimits: 'limited' }),
+      admitGlobal:()=>{const day=Math.floor(Date.now()/86400000);return consumeCounter(database.db.collection('ai_global_budget_v1'),`day:${day}`,positive('GLOBAL_DAILY_AI_LIMIT',500),new Date((day+2)*86400000));},
       consumeQuota: quota.consume,
       generate: (messages, signal, onText) => generateGemini({ apiKey, model, messages, signal, onText }),
     });
@@ -61,7 +68,7 @@ async function main() {
       console.log(`AI: cần đăng nhập, hạn mức ${daily} lượt/user/ngày UTC và ${minute} lượt/phút.`);
       if (!apiKey) console.log('AI chưa bật: cần cấu hình GEMINI_API_KEY.');
     });
-    const shutdown = () => { server.close(() => { void database.close(); }); server.closeAllConnections(); };
+    const shutdown = () => { clearInterval(cleanupTimer); server.close(() => { void database.close(); }); server.closeAllConnections(); };
     process.once('SIGINT', shutdown);
     process.once('SIGTERM', shutdown);
   } catch {

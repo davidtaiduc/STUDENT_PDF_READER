@@ -1,3 +1,4 @@
+import {configureDns} from '../../backend/src/config/dns.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
@@ -15,7 +16,7 @@ test('isolated MongoDB account/session integration', {skip: !uri ? 'NOT RUN: set
  const client=new MongoClient(uri,{serverSelectionTimeoutMS:3000,connectTimeoutMS:3000,maxPoolSize:3});
  let connected=false;
  try {
-  await client.connect();connected=true;
+  configureDns(process.env.MONGODB_DNS_SERVERS);await client.connect();connected=true;
   const db=client.db(databaseName), repo=mongoAuthRepository(db), now=new Date(), userId=new ObjectId(), otherId=new ObjectId();
   const password='integration-password-only', passwordHash=await hashPassword(password);
   const check=(name,work)=>t.test(name,async()=>{try{await work();}catch{throw new Error('Integration check failed; driver/connection details suppressed.');}});

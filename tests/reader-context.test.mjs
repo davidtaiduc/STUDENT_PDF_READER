@@ -20,6 +20,6 @@ test('text extraction touches only explicitly requested pages, no AI/network; sc
 });
 test('AI scope is explicit, bounded history is independent of total saved transcript, insufficient context is instructed',()=>{
  const scope={kind:'page',pages:[250]},messages=buildMessages('ask',{cleanedText:'[Trang 250]\nOnly this',context:{before:'',after:''},scope},'Explain?');
- assert.deepEqual(JSON.parse(messages[1].content).scope,scope);assert.match(messages[0].content,/ngữ cảnh hiện tại chưa đủ/);
+ assert.deepEqual(JSON.parse(messages[1].content).scope,scope);assert.match(messages[0].content,/Nếu thực sự thiếu dữ kiện/);
  const recent=recentChatContext(Array.from({length:1000},()=>({question:'Q'.repeat(100),answer:'A'.repeat(1000)})));assert.ok(recent.length<=6);assert.ok(JSON.stringify(recent).length<6500);
 });

@@ -1,3 +1,4 @@
+import {clientAddress} from './clientAddress.ts';
 import type { Db } from 'mongodb';
 import type { IncomingMessage,ServerResponse } from 'node:http';
 import { randomBytes,createHash } from 'node:crypto';
@@ -16,10 +17,10 @@ export const emailTokenHash=(token:string)=>createHash('sha256').update(token).d
 export function mongoEmailRepository(db:Db):EmailRepository {
  const users=db.collection<EmailUser>('users');
  return {
-  issue:async(user,purpose,hash,expiresAt)=>{await users.updateOne({_id:user._id,passwordHash:user.passwordHash},{$set:{[`emailTokens.${purpose}`]:{hash,expiresAt,passwordHash:user.passwordHash}}});},
-  find:(hash,purpose,now)=>users.findOne({[`emailTokens.${purpose}.hash`]:hash,[`emailTokens.${purpose}.expiresAt`]:{$gt:now}}),
+  issue:async(user,purpose,hash,expiresAt)=>{await users.updateOne({_id:user._id,passwordHash:user.passwordHash,deletedAt:{$exists:false}},{$set:{[`emailTokens.${purpose}`]:{hash,expiresAt,passwordHash:user.passwordHash}}});},
+  find:(hash,purpose,now)=>users.findOne({deletedAt:{$exists:false},[`emailTokens.${purpose}.hash`]:hash,[`emailTokens.${purpose}.expiresAt`]:{$gt:now}}),
   async complete(user,purpose,hash,newPasswordHash){
-   return (await users.updateOne({_id:user._id,passwordHash:user.passwordHash,[`emailTokens.${purpose}.hash`]:hash,[`emailTokens.${purpose}.expiresAt`]:{$gt:new Date()},[`emailTokens.${purpose}.passwordHash`]:user.passwordHash},purpose==='reset'?{$set:{passwordHash:newPasswordHash!,updatedAt:new Date()},$inc:{sessionVersion:1},$unset:{emailTokens:''}}:{$set:{emailVerifiedAt:new Date(),updatedAt:new Date()},$unset:{'emailTokens.verify':''}})).modifiedCount===1;
+   return (await users.updateOne({_id:user._id,passwordHash:user.passwordHash,deletedAt:{$exists:false},[`emailTokens.${purpose}.hash`]:hash,[`emailTokens.${purpose}.expiresAt`]:{$gt:new Date()},[`emailTokens.${purpose}.passwordHash`]:user.passwordHash},purpose==='reset'?{$set:{passwordHash:newPasswordHash!,updatedAt:new Date()},$inc:{sessionVersion:1},$unset:{emailTokens:''}}:{$set:{emailVerifiedAt:new Date(),updatedAt:new Date()},$unset:{'emailTokens.verify':''}})).modifiedCount===1;
   },
  };
 }
@@ -37,7 +38,7 @@ export function createEmailHandler(repo:AuthRepository,tokens:EmailRepository,or
    if(!req.headers.origin||!origins.includes(req.headers.origin))throw new AuthError(403,'Nguồn yêu cầu không được phép.');
    const input=await jsonBody(req),path=req.url;
    const bucket=Math.floor(Date.now()/900000),expiry=new Date((bucket+2)*900000);
-   if(!await repo.consume(`email:ip:${emailTokenHash(req.socket.remoteAddress??'unknown')}:${bucket}`,15,expiry)||!await repo.consume(`email:global:${bucket}`,200,expiry))throw new AuthError(429,'Quá nhiều yêu cầu. Hãy thử lại sau 15 phút.');
+   if(!await repo.consume(`email:ip:${emailTokenHash(clientAddress(req))}:${bucket}`,15,expiry)||!await repo.consume(`email:global:${bucket}`,200,expiry))throw new AuthError(429,'Quá nhiều yêu cầu. Hãy thử lại sau 15 phút.');
    if(path==='/api/auth/forgot-password'||path==='/api/auth/resend-verification'){
     if(!mailer)throw new AuthError(503,'Dịch vụ email chưa được cấu hình.');
     const purpose=path.endsWith('forgot-password')?'reset':'verify';

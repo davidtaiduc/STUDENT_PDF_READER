@@ -1,0 +1,22 @@
+[Unit]
+Description=StudyPDF web and API
+After=network-online.target
+Wants=network-online.target
+[Service]
+Type=simple
+User=studypdf
+WorkingDirectory=/opt/studypdf/current
+Environment=NODE_ENV=production
+Environment=TRUST_PROXY=loopback
+EnvironmentFile=/etc/studypdf.env
+ExecStart=/usr/bin/node scripts/serve-production.mjs
+Restart=on-failure
+RestartSec=5
+KillMode=control-group
+TimeoutStopSec=20
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+[Install]
+WantedBy=multi-user.target

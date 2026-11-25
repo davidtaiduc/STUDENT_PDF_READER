@@ -1,0 +1,49 @@
+/* Self-hosted Google Fonts; see OFL licenses in this directory. */
+/* full */
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(./be-vietnam-pro-400-full.ttf) format('truetype');
+}
+/* full */
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(./be-vietnam-pro-500-full.ttf) format('truetype');
+}
+/* full */
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(./be-vietnam-pro-600-full.ttf) format('truetype');
+}
+/* full */
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(./be-vietnam-pro-700-full.ttf) format('truetype');
+}
+/* full */
+@font-face {
+  font-family: 'Literata';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(./literata-500-full.ttf) format('truetype');
+}
+/* full */
+@font-face {
+  font-family: 'Literata';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(./literata-600-full.ttf) format('truetype');
+}

@@ -21,9 +21,9 @@ export function errorFromPayload(payload: { error?: unknown; code?: unknown; ret
 }
 
 export function aiErrorTitle(code: AiErrorCode) {
-  if (code === 'provider_rate_limit') return 'Gemini cần một khoảng nghỉ';
-  if (code === 'provider_limit') return 'Gemini đang giới hạn yêu cầu';
-  if (code === 'provider_quota') return 'Đã hết hạn mức Gemini trong ngày';
+  if (code === 'provider_rate_limit') return 'AI đang bận, vui lòng chờ một chút';
+  if (code === 'provider_limit') return 'Bạn đang gửi yêu cầu quá nhanh';
+  if (code === 'provider_quota') return 'Dịch vụ AI đã hết lượt phục vụ hôm nay';
   if (code === 'app_busy') return 'Ứng dụng đang xử lý yêu cầu khác';
   if (code === 'app_quota') return 'Đã chạm hạn mức của ứng dụng';
   if (code === 'payment' || code === 'configuration') return 'Dịch vụ AI cần được kiểm tra';

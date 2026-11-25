@@ -1,3 +1,4 @@
+import {purgeDeletedAccounts} from '../../backend/src/auth/deletion.ts';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {once} from 'node:events';
@@ -28,5 +29,11 @@ test('GridFS library roundtrip, session isolation, Origin and concurrent version
   assert.equal((await put(alice,'"1"',Buffer.from('invalid archive'))).status,400);
   const race=await Promise.all([put(bob),put(bob)]);assert.deepEqual(race.map(r=>r.status).sort(),[200,409]);
   assert.equal(await db.collection('library_archives_v1.files').countDocuments(),2);
+  const removed=repo.users[0];removed.deletedAt=new Date();await db.collection('users').insertOne({_id:removed._id,deletedAt:removed.deletedAt});
+  await purgeDeletedAccounts(db);await purgeDeletedAccounts(db);
+  assert.equal(await db.collection('library_archives_v1.files').countDocuments(),1);
+  assert.equal((await db.collection('library_heads_v1').findOne({_id:removed._id.toHexString()})).deleted,true);
+  assert.equal((await fetch(url,{headers:{Cookie:alice}})).status,401);
+  assert.equal((await fetch(url,{headers:{Cookie:bob}})).status,200);
  }finally{server.closeAllConnections();await new Promise(r=>server.close(r));try{await db.dropDatabase();}finally{await client.close();}}
 });

@@ -34,14 +34,14 @@ export default function AccountMenu() {
   return <div className="account-controls">
     <EmailRecovery />
     {status === 'checking' ? <span role="status">Đang kiểm tra tài khoản…</span> : status === 'unavailable' ? <span role="status">{connectionError} <button onClick={() => void refresh()}>Thử lại</button></span> : null}
-    {user && status === 'ready' ? <details><summary>{user.displayName}</summary><div className="account-popover"><strong>{user.displayName}</strong><span>{user.email}</span><button disabled={busy} onClick={() => setSettings(true)}>Quản lý tài khoản</button><p>PDF đọc trên máy. PDF và chat lưu trên trình duyệt này.</p><button disabled={busy} onClick={() => void logout()}>{busy ? 'Đang xử lý…' : 'Đăng xuất'}</button></div></details> : status === 'ready' ? <><button onClick={() => { setMode('login'); setOpen(true); }}>Đăng nhập</button><button onClick={() => { setMode('register'); setOpen(true); }}>Đăng ký</button></> : null}
+    {user && status === 'ready' ? <section className="account-popover" aria-label="Tài khoản hiện tại"><strong>{user.displayName}</strong><span>{user.email}</span><button disabled={busy} onClick={() => setSettings(true)}>Quản lý tài khoản</button><p>PDF và chat tự lưu vào tài khoản của bạn.</p><button disabled={busy} onClick={() => void logout()}>{busy ? 'Đang xử lý…' : 'Đăng xuất'}</button></section> : status === 'ready' ? <><button onClick={() => { setMode('login'); setOpen(true); }}>Đăng nhập</button><button onClick={() => { setMode('register'); setOpen(true); }}>Đăng ký</button></> : null}
     {notice && <span role="status">{notice}</span>}
     {settings && user && status === 'ready' && <AccountSettings onClose={closeSettings} />}
     {!open && error && <span role="alert">{error}</span>}
     <dialog ref={dialog} className="auth-dialog" aria-labelledby="auth-title" onCancel={event => { event.preventDefault(); close(); }} onClose={() => setOpen(false)}>
       {open && <form onSubmit={send}>
         <div className="auth-heading"><h2 id="auth-title">{mode === 'login' ? 'Đăng nhập' : 'Đăng ký'}</h2><button type="button" aria-label="Đóng" disabled={busy} onClick={close}>×</button></div>
-        <p>Tài khoản StudyPDF AI. PDF và chat lưu trên trình duyệt này, chưa đồng bộ thiết bị. Sau đăng ký, bấm Xác minh email để nhận liên kết.</p>
+        <p>Tài khoản StudyPDF AI. PDF và chat tự lưu vào tài khoản để bạn đọc tiếp trên thiết bị khác. Sau đăng ký, bấm Xác minh email để nhận liên kết.</p>
         {mode === 'register' && <label>Tên hiển thị<input name="displayName" autoComplete="name" maxLength={80} required disabled={busy} /></label>}
         <label>Email<input ref={first} name="email" type="email" autoComplete="username" maxLength={254} required disabled={busy} /></label>
         <label>Mật khẩu<input name="password" type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={8} maxLength={128} required disabled={busy} /></label>

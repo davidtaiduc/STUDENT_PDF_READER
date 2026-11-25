@@ -1,3 +1,4 @@
+import {clientAddress} from './clientAddress.ts';
 import type { IncomingMessage } from 'node:http';
 import type { AuthRepository, UserDocument } from './repository.ts';
 import { readSessionCookie, sessionHash } from './session.ts';
@@ -28,15 +29,15 @@ export async function resolveSession(repo: AuthRepository, cookie: string | unde
   const token = readSessionCookie(cookie);
   const session = token ? await repo.findSession(sessionHash(token), new Date()) : null;
   const user = session ? await repo.userById(session.userId) : null;
-  if (!user || !session || (session.version ?? 0) !== (user.sessionVersion ?? 0)) return null;
+  if (!user || user.deletedAt || !session || (session.version ?? 0) !== (user.sessionVersion ?? 0)) return null;
   return { user, session };
 }
 export function createPasswordWork(repo: AuthRepository) {
   let active = 0;
-  return async <T>(req: IncomingMessage, action: 'register' | 'login' | 'change-password' | 'logout-all', subject: string, work: () => Promise<T>): Promise<T> => {
+  return async <T>(req: IncomingMessage, action: 'register' | 'login' | 'change-password' | 'logout-all' | 'delete-account', subject: string, work: () => Promise<T>): Promise<T> => {
     const bucket = Math.floor(Date.now() / 900000), expiry = new Date((bucket + 2) * 900000);
-    const register = action === 'register', sensitive = action === 'change-password' || action === 'logout-all';
-    if (!await repo.consume(`${action}:ip:${sessionHash(req.socket.remoteAddress ?? 'unknown')}:${bucket}`, register ? 5 : 20, expiry)
+    const register = action === 'register', sensitive = action === 'change-password' || action === 'logout-all' || action === 'delete-account';
+    if (!await repo.consume(`${action}:ip:${sessionHash(clientAddress(req))}:${bucket}`, register ? 5 : 20, expiry)
       || !await repo.consume(`${action}:subject:${sessionHash(subject)}:${bucket}`, register ? 3 : sensitive ? 5 : 10, expiry)
       || !await repo.consume(`auth:global:${bucket}`, 200, expiry)) throw new AuthError(429, 'Bạn đã thử quá nhiều lần. Vui lòng thử lại sau 15 phút.');
     if (active >= 2) throw new AuthError(429, 'Đang xử lý yêu cầu tài khoản khác. Vui lòng thử lại sau.');

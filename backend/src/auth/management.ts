@@ -12,6 +12,17 @@ export async function manageAccount(repo: AuthRepository, req: IncomingMessage, 
   const { user, session } = auth, version = user.sessionVersion ?? 0, path = req.url;
   const send = (value: object) => { res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(value)); };
   if (path === '/api/users/me' && req.method === 'GET') { send(profile(user)); return; }
+  if (path === '/api/users/me' && req.method === 'DELETE') {
+    if (input.confirmation !== 'XÓA TÀI KHOẢN') throw new AuthError(400, 'Nhập XÓA TÀI KHOẢN để xác nhận.');
+    const current = validatePassword(input.currentPassword);
+    await passwordWork(req, 'delete-account', user._id.toHexString(), async () => {
+      if (!await verifyPassword(user.passwordHash, current)) throw new AuthError(400, 'Mật khẩu hiện tại không đúng.');
+      if (!await resolveSession(repo, req.headers.cookie)) throw new AuthError(401, 'Phiên đã bị thu hồi.');
+      if (!await repo.deleteAccount(user._id, user.passwordHash, version)) throw new AuthError(409, 'Thông tin bảo mật đã thay đổi. Hãy tải lại tài khoản.');
+    });
+    res.setHeader('Set-Cookie', sessionCookie('', secure));
+    send({ success: true, authenticated: false, message: 'Tài khoản đã bị vô hiệu hóa và thông tin cá nhân đã xóa. Bản thư viện trên máy chủ được dọn tự động; bản sao trên thiết bị khác và file đã xuất cần xóa riêng.' }); return;
+  }
   if (path === '/api/users/me' && req.method === 'PATCH') {
     if (Object.keys(input).some(key => key !== 'displayName')) throw new AuthError(400, 'Chỉ được cập nhật tên hiển thị.');
     const updated = await repo.updateName(user._id, validateName(input.displayName));

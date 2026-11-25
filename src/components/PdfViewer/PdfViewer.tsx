@@ -1,3 +1,5 @@
+import {useLibraryAutoSync} from '../../hooks/useLibraryAutoSync';
+import PdfRegionOcr from './PdfRegionOcr';
 import LibraryTools from './LibraryTools';
 import {extractOcrContext,type OcrOptions} from '../../services/pdf/ocr';
 import {useAuth} from '../Auth/context';
@@ -7,7 +9,7 @@ import {extractPageContext} from '../../services/pdf/pageContext';
 import type {PdfSelection} from '../../types/selection';
 import type { ChatActionHandle } from '../AiPanel/ChatPanel';
 import DocumentNavigation from './DocumentNavigation';
-import {subscribeLibrary,renameDocument,deleteDocument,renameChat,deleteChat,pdfId,saveDocument,listDocuments,loadDocument,loadChat,type LibraryDocument,type LibrarySession} from '../../services/library/store';
+import {GENERAL_CHAT_ID,subscribeLibrary,renameDocument,deleteDocument,renameChat,deleteChat,pdfId,saveDocument,listDocuments,loadDocument,loadChat,type LibraryDocument,type LibrarySession} from '../../services/library/store';
 import ReaderSplitPane from './ReaderSplitPane';
 import PdfSelectionActions from './PdfSelectionActions';
 import { useOwnerScope } from '../Auth/useOwnerScope';
@@ -33,7 +35,9 @@ export default function PdfViewer({documentsOpen,onToggleDocuments,onDocumentCha
   const [documentOwner,setDocumentOwner]=useState<typeof ownerScope>(null);
   const [currentDocumentId,setCurrentDocumentId]=useState('');
   const [documents,setDocuments]=useState<LibraryDocument[]>([]);
-  const [librarySession,setLibrarySession]=useState<LibrarySession>();
+  const [librarySession,setLibrarySession]=useState<LibrarySession>(()=>newSession(sessionOwner,GENERAL_CHAT_ID));
+  const [libraryOwner,setLibraryOwner]=useState(sessionOwner);
+  if(libraryOwner!==sessionOwner){setLibraryOwner(sessionOwner);setLibrarySession(newSession(sessionOwner,GENERAL_CHAT_ID));}
   const [libraryWorking,setLibraryWorking]=useState(false);
   const libraryLock=useRef(false);
   const [libraryRevision,setLibraryRevision]=useState(0);
@@ -41,6 +45,8 @@ export default function PdfViewer({documentsOpen,onToggleDocuments,onDocumentCha
   ownerRef.current=sessionOwner;
   const [fitToWidth,setFitToWidth]=useState(true);
   const chatActionRef=useRef<ChatActionHandle>(null);
+  const canAutoSync=useCallback(()=>!libraryLock.current&&!chatActionRef.current?.isBusy(),[]);
+  const cloud=useLibraryAutoSync(sessionOwner,canAutoSync);
   const [chatReveal,setChatReveal]=useState(0);
   const viewerContainerRef=useRef<HTMLElement>(null);
 
@@ -58,7 +64,11 @@ export default function PdfViewer({documentsOpen,onToggleDocuments,onDocumentCha
   const navigate=(page:number)=>setCurrentPage(page);
   const viewerRef = useRef<HTMLDivElement>(null);
   const selectionScope = `${ownerScope}-${documentVersion}-${pdf?.fingerprints[0] ?? "empty"}-${currentPage}-${scale}`;
-  const selection = usePdfSelection(viewerRef, selectionScope);
+  const nativeSelection = usePdfSelection(viewerRef, selectionScope);
+  const ocrScope=`${sessionOwner}-${documentVersion}-${currentPage}-${scale}`;
+  const [regionSelection,setRegionSelection]=useState<{scope:string;value:PdfSelection|null}|null>(null);
+  const receiveRegion=useCallback((value:PdfSelection|null)=>setRegionSelection({scope:ocrScope,value}),[ocrScope]);
+  const selection=nativeSelection??(regionSelection?.scope===ocrScope?regionSelection.value:null);
 
   const fittedScale = useCallback((pageWidth: number) => {
     const root = viewerRef.current;
@@ -79,13 +89,18 @@ export default function PdfViewer({documentsOpen,onToggleDocuments,onDocumentCha
   function newSession(owner:NonNullable<typeof ownerScope>,documentId:string,chat?:Awaited<ReturnType<typeof loadChat>>):LibrarySession{
     return {owner,documentId,chatId:chat?.id??crypto.randomUUID(),turns:chat?.turns??[],revision:chat?.revision??0,onSaved:()=>setLibraryRevision(n=>n+1),onNew:async()=>{await chatActionRef.current?.flush();setLibrarySession(newSession(owner,documentId));}};
   }
+  async function openGeneralChat(chatId?:string){
+    if(libraryLock.current)return;const owner=ownerRef.current;
+    try{await chatActionRef.current?.flush();const chat=chatId?await loadChat(owner,GENERAL_CHAT_ID,chatId):undefined;if(ownerRef.current!==owner)return;await closeDocument();setLibrarySession(newSession(owner,GENERAL_CHAT_ID,chat));}
+    catch(e){setStorageWarning(e instanceof Error?e.message:'Không mở được chat đã lưu.');}
+  }
   async function closeDocument(){
-    ++requestRef.current;setDocumentVersion(requestRef.current);setPdf(null);setLoading(false);setError(null);setFileName('');setCurrentDocumentId('');setLibrarySession(undefined);onDocumentChange('');const task=loadingTaskRef.current;loadingTaskRef.current=null;await task?.destroy();
+    ++requestRef.current;setDocumentVersion(requestRef.current);setPdf(null);setLoading(false);setError(null);setFileName('');setCurrentDocumentId('');setLibrarySession(newSession(ownerRef.current,GENERAL_CHAT_ID));onDocumentChange('');const task=loadingTaskRef.current;loadingTaskRef.current=null;await task?.destroy();
   }
   async function runLibrary(work:()=>Promise<void>,refresh=true){
     if(libraryLock.current)throw new Error('Đang xử lý thư viện.');libraryLock.current=true;setLibraryWorking(true);const owner=ownerRef.current;let started=false;
     try{await chatActionRef.current?.flush();started=true;await work();}
-    finally{try{if(started&&refresh&&ownerRef.current===owner){const rows=await listDocuments(owner);if(currentDocumentId&&!rows.some(d=>d.id===currentDocumentId))await closeDocument();else if(currentDocumentId){let chat:Awaited<ReturnType<typeof loadChat>>|undefined;if(librarySession?.owner===owner)try{chat=await loadChat(owner,currentDocumentId,librarySession.chatId);}catch{/* Deleted or empty chat opens a new one. */}setLibrarySession(newSession(owner,currentDocumentId,chat));}setLibraryRevision(n=>n+1);}}finally{libraryLock.current=false;setLibraryWorking(false);}}
+    finally{try{if(started&&refresh&&ownerRef.current===owner){const rows=await listDocuments(owner);if(currentDocumentId&&!rows.some(d=>d.id===currentDocumentId))await closeDocument();else if(currentDocumentId){let chat:Awaited<ReturnType<typeof loadChat>>|undefined;if(librarySession?.owner===owner)try{chat=await loadChat(owner,currentDocumentId,librarySession.chatId);}catch{/* Deleted or empty chat opens a new one. */}setLibrarySession(newSession(owner,currentDocumentId,chat));}if(!currentDocumentId&&librarySession?.owner===owner&&librarySession.documentId===GENERAL_CHAT_ID){let general:Awaited<ReturnType<typeof loadChat>>|undefined;try{general=await loadChat(owner,GENERAL_CHAT_ID,librarySession.chatId);}catch{/* Empty or deleted chat starts fresh. */}setLibrarySession(newSession(owner,GENERAL_CHAT_ID,general));}setLibraryRevision(n=>n+1);}}finally{libraryLock.current=false;setLibraryWorking(false);}}
   }
   async function renameLibraryDocument(id:string,name:string){const owner=ownerRef.current;await renameDocument(owner,id,name);if(currentDocumentId===id&&documentOwner===owner){setFileName(name.trim());onDocumentChange(name.trim());}setLibraryRevision(n=>n+1);}
   async function deleteLibraryDocument(id:string){const owner=ownerRef.current;if(currentDocumentId===id)await chatActionRef.current?.flush();await deleteDocument(owner,id);if(currentDocumentId===id&&ownerRef.current===owner)await closeDocument();setLibraryRevision(n=>n+1);}
@@ -124,6 +139,8 @@ export default function PdfViewer({documentsOpen,onToggleDocuments,onDocumentCha
       const data = await file.arrayBuffer();
       if (request !== requestRef.current) return;
       const id=await pdfId(data);
+      // PDF.js transfers data to its worker. Keep bytes for cross-browser IDB storage.
+      const persistedData=data.slice(0);
       if(request!==requestRef.current||ownerRef.current!==owner)return;
       const task = pdfjsLib.getDocument({
         data,
@@ -138,8 +155,8 @@ export default function PdfViewer({documentsOpen,onToggleDocuments,onDocumentCha
       const firstPage = await document.getPage(1);
       if (request !== requestRef.current) return;
       if(ownerRef.current!==owner)return;
-      try{await saveDocument(owner,id,file);if(request!==requestRef.current||ownerRef.current!==owner)return;setLibraryRevision(n=>n+1);setCurrentDocumentId(id);setLibrarySession(newSession(owner,id,chat));}
-      catch(e){setStorageWarning(e instanceof Error?e.message:'Không lưu được PDF.');setLibrarySession(undefined);setCurrentDocumentId('');}
+      try{await saveDocument(owner,id,file,persistedData);if(request!==requestRef.current||ownerRef.current!==owner)return;setLibraryRevision(n=>n+1);setCurrentDocumentId(id);setLibrarySession(newSession(owner,id,chat));}
+      catch(e){setStorageWarning(e instanceof Error?e.message:'Không lưu được PDF.');setLibrarySession(newSession(ownerRef.current,GENERAL_CHAT_ID));setCurrentDocumentId('');}
       setPdf(document);
       setCurrentPage(1);
       setScale(fittedScale(firstPage.getViewport({ scale: 1 }).width));
@@ -168,7 +185,7 @@ export default function PdfViewer({documentsOpen,onToggleDocuments,onDocumentCha
     const version=requestRef.current;
     const cleanedText=options?.ocr?await extractOcrContext(pdf,pages,signal,options):await extractPageContext(pdf,pages,signal);
     signal.throwIfAborted();if(version!==requestRef.current)throw new Error('Tài liệu đã thay đổi. Hãy chuẩn bị ngữ cảnh lại.');
-    return {source:'pdf',scope:{kind:pages.length===1?'page':'pages',pages},pageNumber:pages[0],cleanedText,text:cleanedText,rawText:cleanedText,context:{before:'',after:''},rect:new DOMRect(),rects:[]};
+    return {ocr:options?.ocr??false,source:'pdf',scope:{kind:pages.length===1?'page':'pages',pages},pageNumber:pages[0],cleanedText,text:cleanedText,rawText:cleanedText,context:{before:'',after:''},rect:new DOMRect(),rects:[]};
   };
   useEffect(()=>{
     const root=viewerRef.current;
@@ -185,16 +202,18 @@ export default function PdfViewer({documentsOpen,onToggleDocuments,onDocumentCha
   const totalPages = documentOwner===ownerScope?(pdf?.numPages??0):0;
   return (
     <div className="reader-shell" data-documents-open={documentsOpen}>
-    {documentsOpen&&<DocumentNavigation tools={<LibraryTools owner={sessionOwner} run={runLibrary}/>} working={libraryWorking} onRenameDocument={renameLibraryDocument} onDeleteDocument={deleteLibraryDocument} onRenameChat={renameLibraryChat} onDeleteChat={deleteLibraryChat} key={sessionOwner} owner={ownerScope} revision={libraryRevision} activeChatId={librarySession?.chatId} onOpenDocument={(id,chatId)=>void openSaved(id,chatId)} documents={documents.filter(item=>item.owner===ownerScope)} currentId={currentDocumentId} onOpenFile={file=>{void handleOpenFile(file);}} onToggle={onToggleDocuments} />}
+    {documentsOpen&&<DocumentNavigation onOpenGeneral={id=>void openGeneralChat(id)} tools={<LibraryTools owner={sessionOwner} run={runLibrary} cloud={cloud.state} onSync={cloud.retry}/>} working={libraryWorking} onRenameDocument={renameLibraryDocument} onDeleteDocument={deleteLibraryDocument} onRenameChat={renameLibraryChat} onDeleteChat={deleteLibraryChat} key={sessionOwner} owner={ownerScope} revision={libraryRevision} activeChatId={librarySession?.chatId} onOpenDocument={(id,chatId)=>void openSaved(id,chatId)} documents={documents.filter(item=>item.owner===ownerScope)} currentId={currentDocumentId} onOpenFile={file=>{void handleOpenFile(file);}} onToggle={onToggleDocuments} />}
     <ReaderSplitPane chatReveal={chatReveal} pdf={
       <section hidden={!!documentOwner&&documentOwner!==ownerScope} ref={viewerContainerRef} className="viewer" aria-label="Tài liệu PDF">
       <div className="document-name" title={fileName}>{fileName || "Mở PDF trên máy để bắt đầu đọc"}</div>
       {storageWarning && <p className="storage-warning" role="status">{storageWarning}</p>}
+      {cloud.state.phase==='error'&&<p className="cloud-library-status cloud-error" role="status">Chưa lưu được thay đổi vào tài khoản. Bản trên máy vẫn được giữ và sẽ tự lưu lại. <button type="button" onClick={cloud.retry}>Thử lưu lại</button></p>}
+      {pdf&&<PdfRegionOcr key={ocrScope} pdf={pdf} pageNumber={currentPage} rootRef={viewerContainerRef} onSelection={receiveRegion}/> }
       <div className="viewer-scroll" ref={viewerRef} aria-busy={loading}>
         {loading && <p className="hint" role="status">Đang mở PDF…</p>}
         {error && <p className="hint error" role="alert">{error}</p>}
-        {!loading && !error && !pdf && <p className="hint">Chọn “Mở PDF” để bắt đầu đọc tài liệu.</p>}
-        {pdf && <PdfPage key={`${pdf.fingerprints[0]}-${currentPage}-${scale}`} pdf={pdf} pageNumber={currentPage} scale={scale} />}
+        {!loading && !error && !pdf && <p className="hint">Mở danh sách tài liệu bằng nút ☰, rồi chọn “Mở PDF mới”. Tài liệu đã lưu sẽ xuất hiện trong danh sách để bạn đọc lại.</p>}
+        {pdf && <PdfPage key={`${documentVersion}-${pdf.fingerprints[0]}-${currentPage}`} pdf={pdf} pageNumber={currentPage} scale={scale} />}
       </div>
       <PdfToolbar compact currentPage={currentPage} totalPages={totalPages} scale={scale}
         onOpenFile={(file) => { void handleOpenFile(file); }}

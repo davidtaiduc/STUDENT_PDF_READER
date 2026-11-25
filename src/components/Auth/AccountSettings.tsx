@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { AccountProfile, AccountSession } from '../../../shared/types/account';
 import { accountRequest, AccountRequestError, loadProfile, loadSessions } from '../../services/account';
+import { clearAccountLibrary } from '../../services/library/store';
 import { useAuth } from './context';
 export default function AccountSettings({ onClose }: { onClose: () => void }) {
   const { setAccount } = useAuth();
@@ -55,6 +56,17 @@ export default function AccountSettings({ onClose }: { onClose: () => void }) {
       else { setSessions(old => old.filter(item => item.isCurrent)); setConfirm(null); setMessage('Đã đăng xuất các phiên khác.'); }
     });
   };
+  const deleteAccount = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();if(!profile)return;
+    const data=new FormData(event.currentTarget),owner=`user:${profile.id}` as const;
+    void run(async()=>{
+      await accountRequest('users/me','DELETE',{currentPassword:data.get('currentPassword'),confirmation:data.get('confirmation')});
+      let localMessage='';
+      try{await clearAccountLibrary(owner);}catch{localMessage=' Không xóa được bản trên trình duyệt; hãy xóa dữ liệu trang web trong cài đặt trình duyệt.';}
+      setAccount(null);onClose();
+      window.dispatchEvent(new CustomEvent('account-notice',{detail:'Đã xóa tài khoản. Bản máy chủ được dọn tự động trong khoảng một phút; bản trên thiết bị khác và file sao lưu cần xóa riêng.'+localMessage}));
+    });
+  };
   const date = (value: string) => new Date(value).toLocaleString('vi-VN');
   return <dialog ref={dialog} className="auth-dialog account-settings" aria-labelledby="account-title" onCancel={event => { event.preventDefault(); if (!lock.current) onClose(); }}>
     <div className="auth-heading"><h2 id="account-title">Quản lý tài khoản</h2><button type="button" disabled={busy} onClick={onClose} aria-label="Đóng quản lý tài khoản">×</button></div>
@@ -72,7 +84,9 @@ export default function AccountSettings({ onClose }: { onClose: () => void }) {
         <ul className="account-sessions">{sessions.map(item => <li key={item.id}><strong>{item.isCurrent ? 'Phiên hiện tại' : 'Phiên khác'}</strong><span>Tạo: {date(item.createdAt)}</span><span>Hết hạn: {date(item.expiresAt)}</span>{!item.isCurrent && <button disabled={busy} onClick={() => void revoke(item.id)}>Đăng xuất phiên này</button>}</li>)}</ul>
         {!confirm ? <div className="account-session-actions"><button disabled={busy} onClick={() => setConfirm('others')}>Đăng xuất các phiên khác</button><button disabled={busy} onClick={() => setConfirm('all')}>Đăng xuất tất cả thiết bị</button></div> : <form onSubmit={revokeMany} className="account-confirm"><p>{confirm === 'all' ? 'Xác nhận đăng xuất tất cả thiết bị, gồm phiên hiện tại?' : 'Xác nhận đăng xuất mọi phiên khác? Phiên hiện tại được giữ lại.'}</p>{confirm === 'all' && <label>Mật khẩu hiện tại để đăng xuất tất cả<input type="password" name="currentPassword" required minLength={8} maxLength={128} autoComplete="current-password" disabled={busy} /></label>}<button disabled={busy}>Xác nhận đăng xuất</button><button type="button" disabled={busy} onClick={() => setConfirm(null)}>Hủy</button></form>}
       </section>
-      <p>PDF và chat được lưu theo tài khoản trên trình duyệt này, chưa đồng bộ giữa các thiết bị.</p>
+      <section aria-labelledby="delete-account-title" className="account-danger"><h3 id="delete-account-title">Xóa tài khoản và dữ liệu</h3><p>Thao tác không thể hoàn tác. Tài khoản và mọi phiên bị vô hiệu hóa ngay; PDF/chat máy chủ được dọn tự động. Thư viện của tài khoản này trên trình duyệt hiện tại cũng bị xóa. Hãy xuất bản sao lưu trước nếu cần. Bản trên thiết bị khác và file đã xuất cần xóa riêng.</p>
+      <details><summary>Tôi muốn xóa tài khoản</summary><form onSubmit={deleteAccount}><label>Mật khẩu để xóa tài khoản<input name="currentPassword" type="password" required minLength={8} maxLength={128} autoComplete="current-password" disabled={busy}/></label><label>Nhập XÓA TÀI KHOẢN<input name="confirmation" required pattern="XÓA TÀI KHOẢN" autoComplete="off" disabled={busy}/></label><button disabled={busy}>Xóa vĩnh viễn tài khoản</button></form></details></section>
+      <p>PDF và chat tự lưu vào tài khoản. Bạn có thể đăng nhập trên thiết bị khác để đọc tiếp.</p>
     </>}
     {busy && <p role="status">Đang xử lý…</p>}
   </dialog>;

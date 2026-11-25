@@ -1,8 +1,9 @@
 import { ObjectId, type Db, type Filter } from 'mongodb';
 import { consumeCounter, type UsageCounter } from '../services/usage/quota.ts';
-export interface UserDocument { _id: ObjectId; email: string; displayName: string; passwordHash: string; createdAt: Date; updatedAt: Date; sessionVersion?: number; emailVerifiedAt?: Date }
+export interface UserDocument { _id: ObjectId; email: string; displayName: string; passwordHash: string; createdAt: Date; updatedAt: Date; sessionVersion?: number; emailVerifiedAt?: Date; deletedAt?: Date }
 export interface SessionDocument { _id: ObjectId; userId: ObjectId; tokenHash: string; createdAt: Date; expiresAt: Date; version?: number }
 export interface AuthRepository {
+  deleteAccount(id: ObjectId, expectedHash: string, version: number): Promise<boolean>;
   findUser(email: string): Promise<UserDocument | null>;
   insertUser(user: UserDocument): Promise<void>;
   insertSession(session: SessionDocument): Promise<void>;
@@ -23,18 +24,22 @@ export function mongoAuthRepository(db: Db): AuthRepository {
   const users = db.collection<UserDocument>('users'), sessions = db.collection<SessionDocument>('sessions');
   const limits = db.collection<UsageCounter>('auth_rate_limits');
   return {
-    findUser: email => users.findOne({ email }),
+    deleteAccount: async (_id, passwordHash, version) => (await users.updateOne({ _id, passwordHash, deletedAt: { $exists: false }, ...userVersion(version) }, {
+      $set: { deletedAt: new Date(), updatedAt: new Date(), email: `${_id.toHexString()}@deleted.invalid`, displayName: 'Tài khoản đã xóa', passwordHash: '!deleted' },
+      $inc: { sessionVersion: 1 }, $unset: { emailTokens: '', emailVerifiedAt: '' },
+    })).modifiedCount === 1,
+    findUser: email => users.findOne({ email, deletedAt: { $exists: false } }),
     insertUser: async user => { await users.insertOne(user); },
     insertSession: async session => { await sessions.insertOne(session); },
     findSession: (tokenHash, now) => sessions.findOne({ tokenHash, expiresAt: { $gt: now } }),
     userById: _id => users.findOne({ _id }),
     revoke: async tokenHash => { await sessions.deleteOne({ tokenHash }); },
     consume: (key, limit, expiry) => consumeCounter(limits, key, limit, expiry),
-    updateName: (_id, displayName) => users.findOneAndUpdate({ _id }, { $set: { displayName, updatedAt: new Date() } }, { returnDocument: 'after' }),
+    updateName: (_id, displayName) => users.findOneAndUpdate({ _id, deletedAt: { $exists: false } }, { $set: { displayName, updatedAt: new Date() } }, { returnDocument: 'after' }),
     // Compare-and-swap and generation change are ONE atomic document update.
-    changePassword: async (_id, passwordHash, version, newHash) => (await users.updateOne({ _id, passwordHash, ...userVersion(version) },
+    changePassword: async (_id, passwordHash, version, newHash) => (await users.updateOne({ _id, passwordHash, deletedAt: { $exists: false }, ...userVersion(version) },
       { $set: { passwordHash: newHash, updatedAt: new Date() }, $inc: { sessionVersion: 1 } })).modifiedCount === 1,
-    revokeAll: async (_id, passwordHash, version) => (await users.updateOne({ _id, passwordHash, ...userVersion(version) },
+    revokeAll: async (_id, passwordHash, version) => (await users.updateOne({ _id, passwordHash, deletedAt: { $exists: false }, ...userVersion(version) },
       { $inc: { sessionVersion: 1 } })).modifiedCount === 1,
     listSessions: (userId, version, now) => sessions.find({ userId, expiresAt: { $gt: now },
       ...(version === 0 ? { $or: [{ version: 0 }, { version: { $exists: false } }] } : { version }) })
@@ -44,6 +49,7 @@ export function mongoAuthRepository(db: Db): AuthRepository {
   };
 }
 export async function createAuthIndexes(db: Db) {
+  await db.collection('ai_global_budget_v1').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
   await db.collection('users').createIndex({ email: 1 }, { unique: true });
   await db.collection('sessions').createIndex({ tokenHash: 1 }, { unique: true });
   await db.collection('sessions').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });

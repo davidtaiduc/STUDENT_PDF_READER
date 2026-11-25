@@ -1,0 +1,16 @@
+{
+  "at": "2026-11-24T08:59:22.901Z",
+  "configured": true,
+  "database": true,
+  "accountFound": true,
+  "sent": [
+    {
+      "purpose": "verify",
+      "accepted": true
+    },
+    {
+      "purpose": "reset",
+      "accepted": true
+    }
+  ]
+}

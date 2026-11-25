@@ -11,7 +11,7 @@ function AiResult({ action, text, before, after, question, pageNumber, onRetry }
   action: AiAction; text: string; before: string; after: string; question: string;
   pageNumber: number; onRetry: () => void;
 }) {
-  const [model, setModel] = useState("Gemini");
+  const [, setModel] = useState("Gemini");
   const [answer, setAnswer] = useState("");
   const [status, setStatus] = useState<"loading" | "streaming" | "ready" | "stopped" | "error">("loading");
   const [error, setError] = useState<AiRequestError | null>(null);
@@ -53,10 +53,9 @@ function AiResult({ action, text, before, after, question, pageNumber, onRetry }
   const busy = status === "loading" || status === "streaming";
   const remaining = Math.max(0, Math.ceil((retryAt - now) / 1000));
   return <div aria-busy={busy}>
-    <p role="status" aria-live="polite">{status === "loading" ? "Đang kết nối Gemini…"
+    <p role="status" aria-live="polite">{status === "loading" ? "Đang chuẩn bị câu trả lời…"
       : status === "streaming" ? "Đang nhận phản hồi…" : status === "stopped" ? "Đã dừng. Giữ lại phần đã nhận."
       : status === "ready" ? "Đã hoàn tất." : "Yêu cầu không hoàn tất."}</p>
-    <small>{model}</small>
     {answer && <AiResponse action={action} text={answer} pageNumber={pageNumber} />}
     {answer && <CopyButton text={answer} />}
     {error && <div className="ai-error" role="alert">
@@ -84,7 +83,7 @@ export default function AiPanel({ selection, action, onClose }: {
       <strong>{actionLabels[action]} · Trang {selection.pageNumber}</strong>
       <button onClick={onClose} aria-label="Đóng panel AI">Đóng</button>
     </div>
-    <small>Gemini · Đoạn chọn, ngữ cảnh lân cận và câu hỏi sẽ được gửi qua backend tới Google khi chạy tác vụ AI.</small>
+    <small>Nội dung đã chọn chỉ được gửi tới Google khi bạn yêu cầu AI xử lý.</small>
       <AiResult key={attempt} action={action} text={selection.cleanedText}
         before={selection.context.before} after={selection.context.after} question=""
         pageNumber={selection.pageNumber} onRetry={() => setAttempt((n) => n + 1)} />

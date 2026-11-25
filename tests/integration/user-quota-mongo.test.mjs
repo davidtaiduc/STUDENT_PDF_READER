@@ -1,3 +1,4 @@
+import {configureDns} from '../../backend/src/config/dns.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
@@ -15,7 +16,7 @@ test('isolated MongoDB per-user quota, leases and live session AI integration',{
  const databaseName='studypdf_test_'+randomBytes(16).toString('hex'),client=new MongoClient(uri,{serverSelectionTimeoutMS:3000,maxPoolSize:4});let connected=false;
  const check=(name,work)=>t.test(name,async()=>{try{await work();}catch{throw new Error('Mongo quota integration check failed; connection details suppressed.');}});
  try{
-  await client.connect();connected=true;const db=client.db(databaseName),repo=mongoUserUsage(db);
+  configureDns(process.env.MONGODB_DNS_SERVERS);await client.connect();connected=true;const db=client.db(databaseName),repo=mongoUserUsage(db);
   const A={kind:'user',id:new ObjectId().toHexString()},B={kind:'user',id:new ObjectId().toHexString()};let now=Date.parse('2026-11-04T23:59:30Z');const quota=createUserQuota(repo,7,20,()=>now);
   await check('indexes and atomic competing quota increments never exceed cap',async()=>{
    await createUsageIndexes(db);await createUsageIndexes(db);const indexes=await db.collection('ai_user_usage_v1').indexes();assert.ok(indexes.some(i=>i.key.userId===1&&i.unique));

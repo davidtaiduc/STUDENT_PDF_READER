@@ -86,3 +86,19 @@ test('short preview token is rejected and wrong tokens do not create a principal
   assert.equal(await authenticate('Bearer wrong'),null);
   assert.deepEqual(await authenticate(`Bearer ${token}`),{kind:'app',id:'preview'});
 });
+
+
+test('global daily budget rejects before charging a user or invoking Gemini',async t=>{
+ let charged=0,called=0;
+ const base=await start(t,{aiConfigured:true,admitGlobal:async()=>false,consumeQuota:async()=>{charged++;return true;},generate:async()=>{called++;}});
+ const response=await fetch(`${base}/api/ai`,{method:'POST',headers:{Origin:'http://allowed.test',Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({action:'translate',selectedText:'Hello',before:'',after:'',question:''})});
+ assert.equal(response.status,429);assert.ok(Number(response.headers.get('retry-after'))>0);assert.match((await response.json()).error,/ngân sách/);assert.equal(charged,0);assert.equal(called,0);
+});
+
+test('API accepts general chat without selected text but still requires source for button actions',async t=>{
+ let calls=0;
+ const base=await start(t,{aiConfigured:true,consumeQuota:async()=>true,generate:async(messages,_signal,onText)=>{const input=JSON.parse(messages[1].content);assert.equal(input.selectedText,'');assert.equal(input.question,'Giải 3x = 12.');calls++;await onText('x = 4');}});
+ const send=action=>fetch(`${base}/api/ai`,{method:'POST',headers:{Origin:'http://allowed.test',Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({action,selectedText:'',before:'',after:'',question:'Giải 3x = 12.'})});
+ const answer=await send('ask');assert.equal(answer.status,200);assert.match(await answer.text(),/x = 4/);
+ assert.equal((await send('translate')).status,400);assert.equal((await send('explain')).status,400);assert.equal(calls,1);
+});

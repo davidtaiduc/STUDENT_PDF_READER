@@ -1,0 +1,36 @@
+{
+  "at": "2026-11-24T08:58:41.396Z",
+  "configured": true,
+  "cases": [
+    {
+      "name": "japanese",
+      "ms": 663,
+      "output": "Tôi muốn luôn giữ bên trong nhà sạch sẽ.",
+      "passed": true
+    },
+    {
+      "name": "english",
+      "ms": 1764,
+      "output": "Một hàm nhận đầu vào và trả về đầu ra.",
+      "passed": true
+    },
+    {
+      "name": "vietnamese",
+      "ms": 819,
+      "output": "Mỗi hàm đảm nhận một nhiệm vụ rõ ràng.",
+      "passed": true
+    },
+    {
+      "name": "math",
+      "ms": 434,
+      "output": "Mối quan hệ giữa năng lượng và khối lượng là E = mc².",
+      "passed": true
+    },
+    {
+      "name": "multiple-choice",
+      "ms": 770,
+      "output": "Câu hỏi: Hãy chọn đáp án đúng. 1. Nhà 2. Trường học",
+      "passed": true
+    }
+  ]
+}

@@ -14,7 +14,7 @@ export default function SelectionAssistant({ librarySession, readerContext, acti
   ownerScope: OwnerScope; selection: PdfSelection | null;
   aiSelection?: PdfSelection | null; onClearAiSelection?: () => void;
 }) {
-  const [captured, setCaptured] = useState<PdfSelection|null>(()=>{const last=librarySession?.turns.at(-1)?.selection;return selection??(last?{...last,source:'pdf',text:last.cleanedText,rawText:last.cleanedText,rect:new DOMRect(),rects:[]}:null);});
+  const [captured, setCaptured] = useState<PdfSelection|null>(()=>{const last=librarySession?.turns.at(-1)?.selection;return selection??(last?.cleanedText.trim()?{...last,source:'pdf',text:last.cleanedText,rawText:last.cleanedText,rect:new DOMRect(),rects:[]}:null);});
   const [removed, setRemoved] = useState<{ pdf: PdfSelection | null; ai: PdfSelection | null } | null>(null);
   if (selection && selection !== captured) {
     setCaptured(selection);
