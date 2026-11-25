@@ -44,3 +44,13 @@ DELETE `/api/users/me` cần cookie, Origin hợp lệ, mật khẩu và cụm x
 
 ## Render (Docker)
 Set PORT=10000, API_PORT=3001, WEB_HOST=0.0.0.0. PORT takes precedence over WEB_PORT for the public gateway. Health check: /api/health. Set ALLOWED_ORIGINS and APP_PUBLIC_URL to the actual HTTPS service URL without trailing slash. Configure secrets in Render environment variables; .env is intentionally absent from the image.
+
+## Vercel frontend + Render gateway
+`vercel.json` proxies /api/* to https://student-pdf-reader-1.onrender.com/api/*.
+On Vercel leave VITE_AI_API_URL empty/unset so browser requests remain same-origin (session cookies).
+On Render set:
+- ALLOWED_ORIGINS=https://studypdf-omega.vercel.app,https://student-pdf-reader-1.onrender.com
+- APP_PUBLIC_URL=https://studypdf-omega.vercel.app
+- PORT=10000, API_PORT=3001, WEB_HOST=0.0.0.0
+Keep Gemini/MongoDB/internal token/email secrets only on Render, never VITE_* variables.
+Use the canonical production Vercel URL; preview URLs are intentionally not automatically allowed.
