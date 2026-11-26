@@ -7,12 +7,21 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<'checking' | 'ready' | 'unavailable'>('checking');
   const [error, setError] = useState('');
   const version = useRef(0);
+  const mutation = useRef(false);
+  const pendingCheck = useRef<{id:number;promise:Promise<void>;block:boolean}|null>(null);
   const channel = useRef<BroadcastChannel | null>(null);
-  const refresh = useCallback(async (block = true) => {
-    if (block) setStatus('checking');
-    const id = ++version.current;
-    try { const result = await authRequest('me'); if (id === version.current) { setUser(result.user); setStatus('ready'); setError(''); } }
-    catch { if (id === version.current) { setStatus(current => !block && current === 'ready' ? 'ready' : 'unavailable'); setError('Chưa kiểm tra được phiên đăng nhập.'); } }
+  const refresh = useCallback((block = true):Promise<void> => {
+    if(mutation.current)return Promise.resolve();
+    const pending=pendingCheck.current;
+    if(pending&&pending.id===version.current&&(!block||pending.block))return pending.promise;
+    if(block)setStatus('checking');
+    const id=++version.current;
+    const promise=authRequest('me').then(result=>{
+      if(id===version.current){setUser(result.user);setStatus('ready');setError('');}
+    }).catch(()=>{
+      if(id===version.current){setStatus(current=>!block&&current==='ready'?'ready':'unavailable');setError('Chưa kiểm tra được phiên đăng nhập.');}
+    }).finally(()=>{if(pendingCheck.current?.id===id)pendingCheck.current=null;});
+    pendingCheck.current={id,promise,block};return promise;
   }, []);
   useEffect(() => {
     let cancelled = false;
@@ -32,9 +41,11 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
   const setAccount = useCallback((account: AccountUser | null) => { ++version.current; setUser(current => account === null || current?.id === account.id ? account : current); setStatus('ready'); setError(''); if (!account) channel.current?.postMessage('session-changed'); }, []);
   const submit = async (action: 'login' | 'register' | 'logout', input?: object) => {
-    const id = ++version.current;
-    const result = await authRequest(action, input);
-    if (id === version.current) { setUser(result.user); setStatus('ready'); setError(''); channel.current?.postMessage('session-changed'); }
+    if(mutation.current)throw new Error('Đang xử lý tài khoản. Vui lòng chờ.');
+    mutation.current=true;const id=++version.current;
+    try{const result=await authRequest(action,input);
+      if(id===version.current){setUser(result.user);setStatus('ready');setError('');channel.current?.postMessage('session-changed');}
+    }finally{mutation.current=false;}
   };
   return <AuthContext.Provider value={{ user, status, error, refresh, submit, setAccount }}>{children}</AuthContext.Provider>;
 }

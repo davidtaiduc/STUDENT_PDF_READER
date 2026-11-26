@@ -8,7 +8,7 @@ export default function App() {
   const [documentName,setDocumentName]=useState('');
   const { user, status } = useAuth();
   useEffect(()=>{const media=window.matchMedia('(min-width:1100px)');const update=()=>{if(!media.matches)setDocumentsOpen(false);};media.addEventListener('change',update);return()=>media.removeEventListener('change',update);},[]);
-  if (!user && status === 'checking') return <main className="study-entry"><p role="status">Đang kiểm tra phiên đăng nhập…</p></main>;
+  if (!user && status === 'checking') return <main className="study-entry"><section className="entry-sheet" aria-label="Đang mở StudyPDF"><span className="entry-monogram" aria-hidden="true">S</span><h1>Đang mở không gian học tập…</h1><p role="status">Bạn chờ một chút nhé. Lần mở đầu có thể mất khoảng một phút.</p><p className="entry-note">Sau khi mở xong, bạn có thể đọc PDF và tiếp tục các cuộc trò chuyện đã lưu.</p></section></main>;
   if (!user) return (
     <main className="study-entry">
       <a className="entry-back" href={`${import.meta.env.BASE_URL}gioi-thieu.html`}>← Về trang giới thiệu</a>

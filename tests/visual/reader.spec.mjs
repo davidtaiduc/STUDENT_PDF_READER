@@ -163,3 +163,27 @@ test('background session checks preserve the PDF and draft through delay and fai
  await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
  await expect(page.locator('.study-entry')).toBeVisible();await expect(page.locator('.viewer')).toHaveCount(0);
 });
+
+
+test('focus storms neither interrupt login nor duplicate in-flight session checks',async({page})=>{
+ await page.goto('http://127.0.0.1:5181');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
+ await page.getByRole('textbox',{name:'Email',exact:true}).fill('reader-fixture@example.test');await page.getByRole('textbox',{name:'Mật khẩu',exact:true}).fill('fake-reader-password');
+ let releaseLogin,seenLogin=false;const loginGate=new Promise(r=>releaseLogin=r);
+ await page.route('**/api/auth/login',async route=>{seenLogin=true;await loginGate;await route.continue();});
+ await page.getByRole('button',{name:'Đăng nhập',exact:true}).last().click();await expect.poll(()=>seenLogin).toBe(true);
+ let checks=0,releaseCheck;const checkGate=new Promise(r=>releaseCheck=r);
+ await page.route('**/api/auth/me',async route=>{checks++;await checkGate;await route.continue();});
+ await page.evaluate(()=>{for(let i=0;i<8;i++)window.dispatchEvent(new Event('focus'));});expect(checks).toBe(0);
+ releaseLogin();await expect(page.locator('.viewer')).toBeVisible();
+ await page.evaluate(()=>{for(let i=0;i<8;i++)window.dispatchEvent(new Event('focus'));});await expect.poll(()=>checks).toBe(1);
+ releaseCheck();await expect(page.getByRole('textbox',{name:'Câu hỏi của bạn',exact:true})).toBeVisible();
+});
+
+test('batched AI output keeps every chunk and saves the final answer',async({page})=>{
+ const answer='Nội dung trả lời đầy đủ. '.repeat(80);
+ await page.route('**/api/ai',route=>route.fulfill({status:200,contentType:'text/event-stream',body:'data: '+JSON.stringify({type:'meta',model:'fake'})+'\n\n'+Array.from(answer).map(text=>'data: '+JSON.stringify({type:'text',text})+'\n\n').join('')+'data: {"type":"done"}\n\n'}));
+ await page.goto('http://127.0.0.1:5181');await openPdf(page);
+ await page.getByRole('textbox',{name:'Câu hỏi của bạn',exact:true}).fill('Hãy trả lời.');await page.getByRole('button',{name:'Gửi câu hỏi',exact:true}).click();
+ await expect(page.getByText('Đã hoàn tất.',{exact:true})).toBeVisible();await expect(page.getByTestId('ai-answer')).toContainText(answer.trim());
+ await page.reload();await expect(page.locator('.viewer')).toBeVisible();await page.getByRole('button',{name:/Mở rộng/}).last().click();await page.getByRole('button',{name:'◌ Đoạn chat 1',exact:true}).click();await expect(page.getByTestId('ai-answer')).toContainText(answer.trim());
+});

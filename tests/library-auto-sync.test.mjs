@@ -11,3 +11,9 @@ test('automatic synchronization waits for busy chats, retries network failures, 
  const c=createAutoSync({debounceMs:5,retryMs:10,canRun:()=>ready,onState:s=>states.push(s),run:async signal=>{calls++;if(calls===1)throw new Error('offline');await new Promise((_,reject)=>signal.addEventListener('abort',()=>{aborted=true;reject(signal.reason);}));return new Date();}});
  c.retry();await wait(20);assert.equal(calls,0);ready=true;await wait(35);assert.ok(states.some(s=>s.phase==='error'));assert.equal(calls,2);c.stop();await wait(10);assert.equal(aborted,true);const count=states.length;c.change();c.retry();await wait(15);assert.equal(states.length,count);
 });
+
+
+test('focus events during an upload do not queue redundant downloads, actual changes still do',async()=>{
+ let calls=0,release;const c=createAutoSync({debounceMs:5,canRun:()=>true,onState:()=>{},run:async()=>{calls++;if(calls===1)await new Promise(r=>release=r);return new Date();}});
+ try{c.retry();await wait(15);for(let i=0;i<10;i++)c.retry();release();await wait(25);assert.equal(calls,1);c.change();await wait(20);assert.equal(calls,2);}finally{c.stop();}
+});

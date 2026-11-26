@@ -10,5 +10,5 @@ export function createAutoSync(options:{run:(signal:AbortSignal,onProgress:(text
   catch(error){if(stopped)return;pending=true;const deferred=error instanceof DOMException&&error.name==='InvalidStateError';if(!deferred)failures++;emit(deferred?'waiting':'error',deferred?'Đang chờ hội thoại lưu xong…':error instanceof Error?`${error.message} Sẽ thử lại tự động.`:'Chưa lưu được lên MongoDB. Bản trên máy vẫn được giữ.');}
   finally{running=false;request=undefined;if(pending&&!stopped)schedule(failures?Math.min((options.retryMs??5000)*2**Math.min(failures-1,4),60000):(options.debounceMs??2000));}
  };
- return {change(){if(stopped)return;pending=true;if(!running){emit('waiting','Có thay đổi chưa lên MongoDB…');schedule(options.debounceMs??2000);}},retry(){if(stopped)return;pending=true;if(!running)schedule(0);},stop(){stopped=true;clearTimeout(timer);request?.abort();}};
+ return {change(){if(stopped)return;pending=true;if(!running){emit('waiting','Có thay đổi chưa lên MongoDB…');schedule(options.debounceMs??2000);}},retry(){if(stopped||running)return;pending=true;schedule(0);},stop(){stopped=true;clearTimeout(timer);request?.abort();}};
 }

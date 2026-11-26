@@ -1,7 +1,7 @@
 import type { AccountUser } from '../../shared/types/account';
 export interface AuthResult { authenticated: boolean; user: AccountUser | null }
 export async function authRequest(action: 'me' | 'register' | 'login' | 'logout', input?: object): Promise<AuthResult> {
-  const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 15000);
+  const controller = new AbortController(), timer = setTimeout(() => controller.abort(), action === 'me' ? 65000 : 20000);
   try {
     const response = await fetch(`${import.meta.env.VITE_AI_API_URL || ''}/api/auth/${action}`, {
       method: action === 'me' ? 'GET' : 'POST', credentials: 'include', cache: 'no-store', signal: controller.signal,

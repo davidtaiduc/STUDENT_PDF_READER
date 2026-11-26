@@ -53,11 +53,12 @@ export default function ChatPanel({ librarySession, readerContext, actionRef, ow
   const controller = useRef<AbortController | null>(null);
   const latest = useRef(turns);
   const mounted = useRef(false);
+  const streamRender = useRef<ReturnType<typeof setTimeout>|null>(null);
   const messages = useRef<HTMLDivElement>(null);
   const follow = useRef(true);
   useEffect(()=>{
     mounted.current=true;
-    return()=>{mounted.current=false;controller.current?.abort();};
+    return()=>{mounted.current=false;controller.current?.abort();if(streamRender.current!==null)clearTimeout(streamRender.current);};
   },[]);
 
   const change = (update: (rows: ChatTurn[]) => ChatTurn[]) => {
@@ -129,8 +130,12 @@ export default function ChatPanel({ librarySession, readerContext, actionRef, ow
       baseUrl: import.meta.env.VITE_AI_API_URL || '', signal: abort.signal,
       onModel: model => update({ model }),
       onText: part => {
-        if (mounted.current && !abort.signal.aborted) change(rows => rows.map(turn => turn.id === id
-          ? { ...turn, answer: turn.answer + part, status: 'streaming' } : turn));
+        if (mounted.current && !abort.signal.aborted) {
+          latest.current=latest.current.map(turn=>turn.id===id?{...turn,answer:turn.answer+part,status:'streaming'}:turn);
+          if(streamRender.current===null)streamRender.current=setTimeout(()=>{
+            streamRender.current=null;if(mounted.current)setTurns(latest.current);
+          },50);
+        }
       },
     }).then(async () => {
       if(!mounted.current)return;
