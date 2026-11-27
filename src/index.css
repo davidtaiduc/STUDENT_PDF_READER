@@ -871,7 +871,7 @@ button:disabled {cursor:default;}
 }
 
 /* Slightly larger conversation text; secondary filter/help controls removed. */
-.split-ai .chat-messages,.ai-answer,.chat-user p {font-size:14px;}
-.split-ai .chat-input-row textarea {font-size:14px;}
-.chat-assistant > strong {font-size:14px;}
+.split-ai .chat-messages,.ai-answer,.chat-user p {font-size:16px;}
+.split-ai .chat-input-row textarea {font-size:16px;}
+.chat-assistant > strong {font-size:16px;}
 .split-ai .chat-header {padding-block:5px;}
