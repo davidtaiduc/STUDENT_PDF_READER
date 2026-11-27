@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="%BASE_URL%theme.css" />
     <title>StudyPDF AI</title>
+    <script>
+      // Keep reader entry and emailed verification/reset links reachable.
+      if (location.hostname.endsWith('.onrender.com') && location.pathname === '/' &&
+          new URLSearchParams(location.search).get('start') !== '1' && !location.hash) {
+        location.replace('/gioi-thieu.html');
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
