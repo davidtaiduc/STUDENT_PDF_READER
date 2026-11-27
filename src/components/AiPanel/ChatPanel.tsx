@@ -170,10 +170,15 @@ export default function ChatPanel({ librarySession, readerContext, actionRef, ow
       follow.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80;
     }}>
       {!turns.length && <div className="reader-chat-welcome">
-        <div className="selection-gesture" aria-hidden="true"><span>một đoạn bạn muốn hiểu</span><svg viewBox="0 0 24 28" width="24" height="28"><path d="M3 2v21l5-5 4 8 4-2-4-8h8Z" fill="currentColor" stroke="var(--panel)" strokeWidth="1.5"/></svg></div>
-        <h2>Tô đen một đoạn trong PDF để hỏi AI</h2>
-        <p>Tô đen chữ ở bên trái rồi chọn Dịch, Giải thích hoặc viết câu hỏi bên dưới.</p>
-        <small>Không tô đen được? Giữ chuột phải và kéo để nhận dạng chữ trong vùng chọn, hoặc bấm Nhận dạng chữ trong vùng. Bạn cũng có thể hỏi mà không kèm PDF.</small>
+        <div className="welcome-intro"><span className="welcome-monogram" aria-hidden="true">S</span><span className="welcome-eyebrow">KHÔNG GIAN ĐỌC VÀ HỎI</span></div>
+        <h2>{chosen?'Đoạn đã chọn đã sẵn sàng.':'Đọc một đoạn. Hiểu thêm một điều.'}</h2>
+        <p>{chosen?'Viết điều bạn muốn làm rõ vào ô bên dưới. AI sẽ dựa trên nội dung bạn đã chọn để trả lời.':'Tài liệu ở bên trái, cuộc trò chuyện ở đây. Chọn phần bạn cần hiểu hoặc bắt đầu bằng câu hỏi của riêng mình.'}</p>
+        <ol className="welcome-reading-steps" aria-label="Cách bắt đầu hội thoại">
+          <li><span className="welcome-step-number" aria-hidden="true">01</span><strong>{chosen?'Đã có nội dung':'Chọn nội dung'}</strong><p>Tô đen chữ trong PDF hoặc khoanh vùng để nhận dạng chữ từ ảnh.</p></li>
+          <li><span className="welcome-step-number" aria-hidden="true">02</span><strong>Chọn cách tìm hiểu</strong><p>Bấm Dịch, Giải thích hoặc nhập yêu cầu của bạn trong khung chat.</p></li>
+          <li><span className="welcome-step-number" aria-hidden="true">03</span><strong>Tiếp tục đào sâu</strong><p>Hỏi thêm trong cùng cuộc trò chuyện. Mở lại chat đã lưu từ thư viện khi cần.</p></li>
+        </ol>
+        <div className="welcome-reading-note"><strong>Không cần chọn PDF để bắt đầu.</strong><p>Bạn vẫn có thể trò chuyện với AI về câu hỏi học tập của mình.</p></div>
       </div>}
 
       {turns.length>visibleCount&&<button type="button" onClick={()=>{follow.current=false;setVisibleCount(n=>n+20);}}>Xem thêm 20 lượt trước</button>}
