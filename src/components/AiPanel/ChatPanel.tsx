@@ -1,7 +1,7 @@
 import type {OcrLanguage} from '../../services/pdf/ocr';
 import {loadChat,subscribeLibrary,saveChat,type LibrarySession} from '../../services/library/store';
 import type {ReaderContext} from '../../types/reader';
-import {parsePageRange,scopeLabel,includesPage} from '../../../shared/ai/contextScope';
+import {parsePageRange,scopeLabel} from '../../../shared/ai/contextScope';
 import type { OwnerScope } from '../../services/ownerScope';
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
 import type { AiAction } from '../../types/ai';
@@ -38,7 +38,7 @@ export default function ChatPanel({ librarySession, readerContext, actionRef, ow
   const chosen=correction?.source===originalChosen?correction.value:originalChosen;
   const editing=!!editSource&&editSource===originalChosen;
   const saveCorrection=()=>{if(!originalChosen)return;const text=ocrDraft.trim();if(!text||text.length>12000){setEditError('Nội dung nhận dạng cần từ 1 đến 12.000 ký tự.');return;}setCorrection({source:originalChosen,value:{...originalChosen,text,cleanedText:text}});setEditSource(null);setEditError('');};
-  const [pageOnly,setPageOnly]=useState(false),[visibleCount,setVisibleCount]=useState(20);
+  const [visibleCount,setVisibleCount]=useState(20);
   useEffect(()=>()=>{preparation.current?.abort();},[contextKey]);
   const prepare=async()=>{
     if(!readerContext)return;
@@ -158,16 +158,13 @@ export default function ChatPanel({ librarySession, readerContext, actionRef, ow
     sendSelection: (action, source) => send(action === 'translate' ? 'Dịch đoạn đã chọn sang tiếng Việt.' : 'Giải thích đoạn đã chọn.', correction?.source===source?correction.value:source, action),
   }));
 
-  const filtered=pageOnly&&readerContext?turns.filter(turn=>!!turn.selection.cleanedText.trim()&&includesPage(turn.selection.scope,turn.selection.pageNumber,readerContext.currentPage)):turns;
-  const visible=filtered.slice(-visibleCount);
+  const visible=turns.slice(-visibleCount);
   return <section className="ai-panel ask-chat" aria-label="Hội thoại Hỏi AI" data-selection-controls>
     <header className="chat-header">
       <strong>Hội thoại AI</strong>
-      <details className="chat-help"><summary>Cách hỏi và lưu hội thoại</summary><small>Tô đen một đoạn để chọn Dịch hoặc Giải thích, hoặc viết yêu cầu vào ô bên dưới. PDF và chat tự lưu vào tài khoản. Để đọc lại, mở rộng tên tài liệu bên trái và chọn đoạn chat. Nội dung bạn chọn và các lượt chat gần nhất được gửi tới Google khi bạn hỏi AI.</small></details>
       <button type="button" disabled={!librarySession&&!turns.length} onClick={()=>void (librarySession?librarySession.onNew():flush().then(()=>change(()=>[]))).catch(e=>setSaveError(e.message))}>Đoạn chat mới</button>
     </header>
     {saveError&&<p role="alert">{saveError} <button onClick={()=>void persist().catch(e=>setSaveError(e.message))}>Thử lưu lại</button></p>}
-    {readerContext&&<label className="chat-page-filter"><input type="checkbox" checked={pageOnly} onChange={event=>{setPageOnly(event.target.checked);setVisibleCount(20);}}/>Chỉ câu hỏi liên quan trang {readerContext.currentPage} ({filtered.length})</label>}
     <div className="chat-messages" ref={messages} onScroll={event => {
       const node = event.currentTarget;
       follow.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80;
@@ -179,8 +176,7 @@ export default function ChatPanel({ librarySession, readerContext, actionRef, ow
         <small>Không tô đen được? Giữ chuột phải và kéo để nhận dạng chữ trong vùng chọn, hoặc bấm Nhận dạng chữ trong vùng. Bạn cũng có thể hỏi mà không kèm PDF.</small>
       </div>}
 
-      {filtered.length>visibleCount&&<button type="button" onClick={()=>{follow.current=false;setVisibleCount(n=>n+20);}}>Xem thêm 20 lượt trước</button>}
-      {pageOnly&&turns.length>0&&filtered.length===0&&<p>Chưa có câu hỏi liên quan trang này trong hội thoại hiện tại. Mở rộng thư mục PDF bên trái để xem các chat cũ.</p>}
+      {turns.length>visibleCount&&<button type="button" onClick={()=>{follow.current=false;setVisibleCount(n=>n+20);}}>Xem thêm 20 lượt trước</button>}
       {visible.map((turn) => <article className="chat-turn" key={turn.id}>
         <div className="chat-user"><strong>Bạn</strong><p>{turn.question}</p>
           {turn.selection.cleanedText.trim()?<details open><summary>{scopeLabel(turn.selection.scope,turn.selection.pageNumber)}</summary><blockquote>{turn.selection.cleanedText}</blockquote></details>:<small>Không kèm đoạn PDF</small>}

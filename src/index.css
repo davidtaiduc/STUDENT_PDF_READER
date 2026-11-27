@@ -869,3 +869,9 @@ button:disabled {cursor:default;}
  .chat-turn {gap:16px;margin-bottom:23px;}
  .split-ai .chat-composer {margin:0 8px 8px;}
 }
+
+/* Slightly larger conversation text; secondary filter/help controls removed. */
+.split-ai .chat-messages,.ai-answer,.chat-user p {font-size:14px;}
+.split-ai .chat-input-row textarea {font-size:14px;}
+.chat-assistant > strong {font-size:14px;}
+.split-ai .chat-header {padding-block:5px;}
